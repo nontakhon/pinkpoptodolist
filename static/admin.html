@@ -517,6 +517,19 @@
                             <textarea x-model="editingTask.admin_note" class="w-full bg-purple-50 border border-purple-200 rounded-xl p-2.5 text-sm" rows="2"></textarea>
                         </div>
                         
+                        <template x-if="editingTask.action_history && editingTask.action_history.filter(a => a.image_url).length > 0">
+                            <div>
+                                <label class="block text-xs font-bold text-gray-500 mb-2">📸 รูปภาพหลักฐาน</label>
+                                <div class="flex gap-2 overflow-x-auto pb-2">
+                                    <template x-for="action in editingTask.action_history.filter(a => a.image_url)">
+                                        <a :href="'/' + action.image_url" target="_blank" class="shrink-0 block w-20 h-20 rounded-xl overflow-hidden border border-gray-200 hover:opacity-80 transition">
+                                            <img :src="'/' + action.image_url" class="w-full h-full object-cover">
+                                        </a>
+                                    </template>
+                                </div>
+                            </div>
+                        </template>
+                        
                         <button @click="saveEditTask()" class="w-full bg-blue-500 text-white font-black py-3 rounded-xl shadow-lg hover:bg-blue-600 transition mt-4">
                             💾 บันทึกการแก้ไข
                         </button>
@@ -531,6 +544,6 @@
         .pb-safe { padding-bottom: env(safe-area-inset-bottom); }
     </style>
     
-    <script src="admin.js?v=12"></script>
+    <script src="admin.js?v=13"></script>
 </body>
 </html>

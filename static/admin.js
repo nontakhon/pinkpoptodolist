@@ -301,7 +301,8 @@ document.addEventListener('alpine:init', () => {
                 value_amount: task.value_amount || 0,
                 note: task.note || '',
                 admin_note: task.admin_note || '',
-                is_reviewed: task.is_reviewed || false
+                is_reviewed: task.is_reviewed || false,
+                action_history: task.action_history || []
             };
             this.showEditModal = true;
         },
