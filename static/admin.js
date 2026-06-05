@@ -295,6 +295,8 @@ document.addEventListener('alpine:init', () => {
             this.editingTask = {
                 id: task.id,
                 title: task.title,
+                description: task.description || '',
+                due_date: task.due_date || '',
                 category_id: task.category_id || '',
                 assigned_member_id: task.assigned_member_id || '',
                 status: task.status,
@@ -316,6 +318,8 @@ document.addEventListener('alpine:init', () => {
             if (!this.editingTask) return;
             const payload = {
                 title: this.editingTask.title,
+                description: this.editingTask.description,
+                due_date: this.editingTask.due_date || null,
                 category_id: this.editingTask.category_id ? parseInt(this.editingTask.category_id) : null,
                 assigned_member_id: this.editingTask.assigned_member_id ? parseInt(this.editingTask.assigned_member_id) : null,
                 status: this.editingTask.status,

@@ -77,6 +77,8 @@ class TaskNoteUpdate(BaseModel):
 
 class TaskUpdate(BaseModel):
     title: Optional[str] = None
+    description: Optional[str] = None
+    due_date: Optional[date] = None
     category_id: Optional[int] = None
     assigned_member_id: Optional[int] = None
     status: Optional[str] = None

@@ -494,6 +494,8 @@ def update_task_full(task_id: int, payload: schemas.TaskUpdate, background_tasks
         raise HTTPException(status_code=404, detail="Task not found")
     
     if payload.title is not None: task.title = payload.title
+    if payload.description is not None: task.description = payload.description
+    if payload.due_date is not None: task.due_date = payload.due_date
     if payload.category_id is not None: task.category_id = payload.category_id
     if payload.assigned_member_id is not None:
         task.assigned_member_id = payload.assigned_member_id

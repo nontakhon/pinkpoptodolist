@@ -461,9 +461,20 @@
                 
                 <template x-if="editingTask">
                     <div class="space-y-4">
+                        <div class="grid grid-cols-3 gap-4">
+                            <div class="col-span-2">
+                                <label class="block text-xs font-bold text-gray-500 mb-1">ชื่องาน</label>
+                                <input type="text" x-model="editingTask.title" class="w-full bg-gray-50 border border-gray-200 rounded-xl p-2.5 text-sm">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-gray-500 mb-1">ครบกำหนด</label>
+                                <input type="date" x-model="editingTask.due_date" class="w-full bg-gray-50 border border-gray-200 rounded-xl p-2.5 text-sm">
+                            </div>
+                        </div>
+
                         <div>
-                            <label class="block text-xs font-bold text-gray-500 mb-1">ชื่องาน</label>
-                            <input type="text" x-model="editingTask.title" class="w-full bg-gray-50 border border-gray-200 rounded-xl p-2.5 text-sm">
+                            <label class="block text-xs font-bold text-gray-500 mb-1">รายละเอียดงาน (Description)</label>
+                            <textarea x-model="editingTask.description" class="w-full bg-gray-50 border border-gray-200 rounded-xl p-2.5 text-sm" rows="2"></textarea>
                         </div>
                         
                         <div class="grid grid-cols-2 gap-4">
@@ -544,6 +555,6 @@
         .pb-safe { padding-bottom: env(safe-area-inset-bottom); }
     </style>
     
-    <script src="admin.js?v=13"></script>
+    <script src="admin.js?v=14"></script>
 </body>
 </html>
