@@ -1,0 +1,723 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>pinkpop (Home Edition)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <script src="app.js?v=20" defer></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+</head>
+<body class="bg-[#FFDFD3] min-h-screen font-sans text-gray-800" x-data="appData()" x-init="init()">
+
+    <!-- Login Screen -->
+    <div x-show="showLoginScreen" class="fixed inset-0 bg-[#FFDFD3] z-[100] flex flex-col items-center justify-center p-6" style="display: none;">
+        <h1 class="text-3xl font-black text-pink-500 mb-8 tracking-tighter">pinkpop <span class="text-2xl">🏠</span></h1>
+        <h2 class="text-xl font-bold text-gray-700 mb-8">คุณคือใครเอ่ย? 🤔</h2>
+        <div class="flex flex-wrap justify-center gap-6 max-w-lg">
+            <template x-for="m in members" :key="m.id">
+                <div @click="loginAs(m)" class="flex flex-col items-center gap-3 cursor-pointer group">
+                    <div class="w-24 h-24 bg-white rounded-3xl shadow-sm flex items-center justify-center text-4xl group-hover:scale-110 group-hover:shadow-xl transition-all border-4 border-transparent group-hover:border-pink-400">
+                        <span x-text="m.avatar_emoji"></span>
+                    </div>
+                    <span class="font-bold text-gray-600" x-text="m.name"></span>
+                </div>
+            </template>
+        </div>
+        <div x-show="members.length === 0" class="text-gray-500 bg-white/50 p-6 rounded-3xl text-center">
+            ยังไม่มีสมาชิกในบ้านเลย!<br>ให้เข้าไปเพิ่มสมาชิกในหน้าตั้งค่าก่อนนะ ⚙️
+            <button @click="showLoginScreen = false; currentView = 'settings'" class="mt-4 block w-full bg-pink-500 text-white rounded-xl py-2 font-bold hover:bg-pink-600 transition-colors">เข้าสู่ระบบเพื่อไปตั้งค่า ⚙️</button>
+        </div>
+    </div>
+
+    <main class="max-w-md mx-auto h-screen flex flex-col bg-[#F9F9F9] shadow-2xl relative overflow-hidden sm:rounded-3xl sm:h-[95vh] sm:mt-[2.5vh]">
+        <!-- App Header -->
+        <header class="bg-white shadow-sm px-4 py-2 sticky top-0 z-50 flex justify-between items-center">
+            <h1 class="text-xl font-black text-pink-500 flex items-center gap-2 tracking-tight">
+                🏡 pinkpop
+            </h1>
+            <div class="flex items-center gap-3">
+                <template x-if="currentMember">
+                    <div @click="currentView = 'profile'" class="flex items-center gap-2 bg-pink-50 px-3 py-1.5 rounded-full shadow-sm cursor-pointer hover:bg-pink-100 transition-colors" title="ดูข้อมูลส่วนตัว">
+                        <span class="text-lg" x-text="currentMember.avatar_emoji"></span>
+                        <span class="font-bold text-pink-700 text-sm hidden sm:block" x-text="currentMember.name"></span>
+                    </div>
+                </template>
+            </div>
+        </header>
+
+        <div class="overflow-y-auto p-3 flex-grow pb-10">
+            <!-- View: Daily Task Board (คนทำงาน) -->
+            <div x-show="currentView === 'board'" x-transition>
+                <!-- Day Selector -->
+                <div class="flex overflow-x-auto gap-2 pb-2 mb-3 scrollbar-hide">
+                    <template x-for="day in days" :key="day.date">
+                        <button @click="selectedDate = day.date" 
+                                :class="selectedDate === day.date ? 'bg-pink-400 text-white shadow-md' : 'bg-white text-gray-500 border border-gray-100 hover:bg-pink-50'"
+                                class="flex flex-col items-center min-w-[60px] p-2 rounded-xl transition-all btn-bounce">
+                            <div class="flex items-center gap-1">
+                                <span class="text-[10px] font-bold" x-text="day.label"></span>
+                                <span class="text-[10px]" x-text="day.mood"></span>
+                            </div>
+                            <span class="text-lg mt-0.5 font-black leading-none" x-text="new Date(day.date).getDate()"></span>
+                        </button>
+                    </template>
+                </div>
+
+                <!-- Compact Progress & Filter -->
+                <div class="bg-white rounded-2xl px-3 py-2 shadow-sm border border-pink-50 mb-3 flex flex-col gap-2">
+                    <!-- Row 1: Count & Progress -->
+                    <div class="flex items-center gap-3">
+                        <div class="flex items-center gap-2 flex-shrink-0 pl-1">
+                            <span class="text-3xl font-black text-pink-500 leading-none" x-text="pendingTasks.length"></span>
+                            <div class="text-[10px] font-bold text-gray-500 leading-tight uppercase tracking-wide">งานรอทำ<br>สู้ๆนะ! ✌️</div>
+                        </div>
+                        <div class="flex-grow bg-pink-50 rounded-full h-1.5 overflow-hidden">
+                            <div class="bg-gradient-to-r from-pink-300 to-pink-500 h-1.5 rounded-full transition-all duration-500 ease-out" 
+                                 :style="`width: ${progressPercentage}%`"></div>
+                        </div>
+                    </div>
+
+                <!-- Alerts -->
+                <div x-show="showSharedAlert && sharedPendingCount > 0 && selectedDate === days[1]?.date" x-transition class="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-100 rounded-xl p-3 mb-4 flex items-start gap-3 shadow-sm relative overflow-hidden cursor-pointer" @click="taskFilter = 'SHARED'; showSharedAlert = false">
+                    <div class="absolute -right-4 -top-4 text-5xl opacity-10">🤝</div>
+                    <span class="text-2xl z-10 animate-pulse">💡</span>
+                    <div class="flex-grow z-10">
+                        <p class="text-xs font-bold text-blue-800">งานส่วนกลางต้องการคนใจดี!</p>
+                        <p class="text-[10px] text-blue-600 mt-0.5">มีงานส่วนกลางรออยู่ <span class="font-black bg-blue-200 px-1.5 rounded-full" x-text="sharedPendingCount"></span> งาน ลองเข้าไปช่วยกันเคลียร์ไหม? (คลิกเพื่อดู)</p>
+                    </div>
+                    <button @click.stop="showSharedAlert = false" class="text-blue-400 hover:text-blue-600 font-bold p-1 bg-white/50 rounded-full w-6 h-6 flex items-center justify-center z-10">✕</button>
+                </div>
+                    
+                    <!-- Row 2: Add Task & Filter -->
+                    <div class="flex items-center justify-between pl-1">
+                        <button @click="openAddTaskModal()" class="bg-pink-500 text-white font-bold text-xs px-4 py-1.5 rounded-xl shadow-sm hover:bg-pink-600 transition-colors flex items-center gap-1 active:scale-95">
+                            <span class="text-sm leading-none">+</span> เพิ่มงาน
+                        </button>
+                        <div class="flex gap-1 bg-gray-50 p-1 rounded-xl border border-gray-100 flex-shrink-0 overflow-x-auto scrollbar-hide">
+                            <button @click="taskFilter = 'ME'" :class="taskFilter === 'ME' ? 'bg-white text-pink-500 shadow-sm font-bold' : 'text-gray-400 hover:text-gray-600'" class="px-2 py-1 rounded-lg text-[10px] transition-all flex items-center gap-1 whitespace-nowrap">
+                                👩🏻‍💻 ฉัน <span x-show="myPendingCount > 0" class="ml-0.5 bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded-full text-[8px] font-black" :class="taskFilter === 'ME' ? 'bg-pink-100 text-pink-500' : ''" x-text="myPendingCount"></span>
+                            </button>
+                            <button @click="taskFilter = 'SHARED'" :class="taskFilter === 'SHARED' ? 'bg-white text-blue-500 shadow-sm font-bold' : 'text-gray-400 hover:text-gray-600'" class="px-2 py-1 rounded-lg text-[10px] transition-all flex items-center gap-1 whitespace-nowrap">
+                                🤝 ส่วนกลาง <span x-show="sharedPendingCount > 0" class="ml-0.5 bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded-full text-[8px] font-black" :class="taskFilter === 'SHARED' ? 'bg-blue-100 text-blue-500' : ''" x-text="sharedPendingCount"></span>
+                            </button>
+                            <button @click="taskFilter = 'ALL'" :class="taskFilter === 'ALL' ? 'bg-white text-gray-700 shadow-sm font-bold' : 'text-gray-400 hover:text-gray-600'" class="px-2 py-1 rounded-lg text-[10px] transition-all flex items-center gap-1 whitespace-nowrap">
+                                🌍 รวม
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+
+                <!-- Overdue Tasks Section -->
+                <div x-show="overdueTasks.length > 0 && selectedDate === days[1]?.date" class="mb-6">
+                    <h3 class="text-sm font-bold text-red-500 mb-3 ml-2 flex items-center gap-1.5">
+                        <span class="text-lg">🔥</span> งานค้าง 
+                        <span class="text-[10px] bg-red-100 text-red-600 px-1.5 py-0.5 rounded-full" x-text="overdueTasks.length + ' งาน'"></span>
+                    </h3>
+                    <div class="space-y-4">
+                        <template x-for="task in overdueTasks" :key="task.id">
+
+                                    <div class="bg-white rounded-2xl px-3 py-2 shadow-sm border border-gray-100 flex items-center gap-3 relative transition-all"
+                                         :class="[
+                                            currentMember && task.assigned_member_id === currentMember.id ? 'border-l-4 border-l-pink-400' : '',
+                                            task.status === 'Completed' ? 'opacity-60 bg-gray-50' : '',
+                                            task.status === 'Pending' && task.due_date < selectedDate ? 'border-l-4 border-l-red-500 bg-red-50' : ''
+                                         ]">
+                                        
+                                        <!-- Complete Checkbox -->
+                                        <button @click="if(task.status === 'Pending') completeTask(task.id, $event)" class="flex-shrink-0 w-6 h-6 rounded-full border-[1.5px] flex items-center justify-center transition-colors btn-bounce"
+                                                :class="task.status === 'Completed' ? 'bg-green-500 border-green-500 text-white' : 'border-pink-300 text-transparent hover:bg-pink-50 hover:text-pink-300'">
+                                            ✓
+                                        </button>
+                                        
+                                        <!-- Task Info -->
+                                        <div class="flex-grow min-w-0 flex flex-col justify-center">
+                                            <div class="flex items-center gap-1.5 flex-wrap">
+                                                <h3 class="font-bold text-gray-800 text-sm leading-tight truncate" :class="task.status === 'Completed' ? 'line-through text-gray-400' : ''" x-text="task.title"></h3>
+                                                
+                                                <!-- Tags (Small) -->
+                                                <span x-show="task.status === 'Pending' && task.due_date < selectedDate" class="text-[9px] text-red-500 font-bold bg-white px-1.5 py-0.5 rounded border border-red-100">ค้าง</span>
+                                                <span x-show="task.is_recurring" class="text-[9px] bg-orange-50 text-orange-500 px-1.5 py-0.5 rounded font-bold border border-orange-100">ประจำ</span>
+                                                <span x-show="task.is_habit" class="text-[9px] bg-green-50 text-green-500 px-1.5 py-0.5 rounded font-bold border border-green-100">Habit</span>
+                                                <span x-show="task.category" class="text-[10px]" x-text="task.category?.icon_emoji"></span>
+                                                
+                                                <div x-show="task.assignment_type === 'MEMBER' && task.assigned_member_id" class="w-4 h-4 rounded-full flex items-center justify-center text-[8px] bg-gray-100 border border-gray-200 ml-auto" x-text="getMember(task.assigned_member_id)?.avatar_emoji || getMember(task.assigned_member_id)?.name.charAt(0)"></div>
+                                                <div x-show="task.assignment_type === 'ANYONE'" class="ml-auto text-[9px] bg-yellow-50 text-yellow-600 px-1.5 py-0.5 rounded font-bold border border-yellow-100 flex items-center gap-0.5">⭐ ใครก็ได้</div>
+                                                <div x-show="task.assignment_type === 'UNASSIGNED'" class="ml-auto text-[9px] bg-gray-50 text-gray-500 px-1.5 py-0.5 rounded font-bold border border-gray-200 flex items-center gap-0.5">❓ ว่าง</div>
+                                            </div>
+                                            <div x-show="task.description" class="text-xs text-gray-400 truncate mt-0.5" x-text="task.description"></div>
+                                        </div>
+                                        
+                                        <!-- Actions -->
+                                        <div class="flex items-center gap-1">
+                                            <button @click="openTaskDetails(task)" class="w-7 h-7 flex items-center justify-center text-gray-400 hover:text-blue-500 hover:bg-blue-50 rounded-full transition-colors text-sm">
+                                                📝
+                                            </button>
+                                            <button @click="openOptionsModal(task)" class="w-7 h-7 flex items-center justify-center text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-full transition-colors font-bold">
+                                                ...
+                                            </button>
+                                        </div>
+                                    </div>
+                        </template>
+                    </div>
+                </div>
+
+                <!-- Task List -->
+                <div class="space-y-6 mb-20">
+                    <template x-for="block in [
+                        { id: 'MORNING', label: '🌅 เช้า (Morning)' },
+                        { id: 'AFTERNOON', label: '☀️ บ่าย (Afternoon)' },
+                        { id: 'EVENING', label: '🌙 ค่ำ (Evening)' },
+                        { id: 'ANYTIME', label: '⭐ เวลาไหนก็ได้ (Anytime)' }
+                    ]" :key="block.id">
+                        <div x-show="groupedPendingTasks[block.id] && groupedPendingTasks[block.id].length > 0">
+                            <h3 class="text-sm font-bold text-gray-500 mb-3 ml-2" x-text="block.label"></h3>
+                            <div class="space-y-4">
+                                <template x-for="task in groupedPendingTasks[block.id]" :key="task.id">
+
+                                    <div class="bg-white rounded-2xl px-3 py-2 shadow-sm border border-gray-100 flex items-center gap-3 relative transition-all"
+                                         :class="[
+                                            currentMember && task.assigned_member_id === currentMember.id ? 'border-l-4 border-l-pink-400' : '',
+                                            task.status === 'Completed' ? 'opacity-60 bg-gray-50' : '',
+                                            task.status === 'Pending' && task.due_date < selectedDate ? 'border-l-4 border-l-red-500 bg-red-50' : ''
+                                         ]">
+                                        
+                                        <!-- Complete Checkbox -->
+                                        <button @click="if(task.status === 'Pending') completeTask(task.id, $event)" class="flex-shrink-0 w-6 h-6 rounded-full border-[1.5px] flex items-center justify-center transition-colors btn-bounce"
+                                                :class="task.status === 'Completed' ? 'bg-green-500 border-green-500 text-white' : 'border-pink-300 text-transparent hover:bg-pink-50 hover:text-pink-300'">
+                                            ✓
+                                        </button>
+                                        
+                                        <!-- Task Info -->
+                                        <div class="flex-grow min-w-0 flex flex-col justify-center">
+                                            <div class="flex items-center gap-1.5 flex-wrap">
+                                                <h3 class="font-bold text-gray-800 text-sm leading-tight truncate" :class="task.status === 'Completed' ? 'line-through text-gray-400' : ''" x-text="task.title"></h3>
+                                                
+                                                <!-- Tags (Small) -->
+                                                <span x-show="task.status === 'Pending' && task.due_date < selectedDate" class="text-[9px] text-red-500 font-bold bg-white px-1.5 py-0.5 rounded border border-red-100">ค้าง</span>
+                                                <span x-show="task.is_recurring" class="text-[9px] bg-orange-50 text-orange-500 px-1.5 py-0.5 rounded font-bold border border-orange-100">ประจำ</span>
+                                                <span x-show="task.is_habit" class="text-[9px] bg-green-50 text-green-500 px-1.5 py-0.5 rounded font-bold border border-green-100">Habit</span>
+                                                <span x-show="task.category" class="text-[10px]" x-text="task.category?.icon_emoji"></span>
+                                                
+                                                <div x-show="task.assignment_type === 'MEMBER' && task.assigned_member_id" class="w-4 h-4 rounded-full flex items-center justify-center text-[8px] bg-gray-100 border border-gray-200 ml-auto" x-text="getMember(task.assigned_member_id)?.avatar_emoji || getMember(task.assigned_member_id)?.name.charAt(0)"></div>
+                                                <div x-show="task.assignment_type === 'ANYONE'" class="ml-auto text-[9px] bg-yellow-50 text-yellow-600 px-1.5 py-0.5 rounded font-bold border border-yellow-100 flex items-center gap-0.5">⭐ ใครก็ได้</div>
+                                                <div x-show="task.assignment_type === 'UNASSIGNED'" class="ml-auto text-[9px] bg-gray-50 text-gray-500 px-1.5 py-0.5 rounded font-bold border border-gray-200 flex items-center gap-0.5">❓ ว่าง</div>
+                                            </div>
+                                            <div x-show="task.description" class="text-xs text-gray-400 truncate mt-0.5" x-text="task.description"></div>
+                                        </div>
+                                        
+                                        <!-- Actions -->
+                                        <div class="flex items-center gap-1">
+                                            <button @click="openTaskDetails(task)" class="w-7 h-7 flex items-center justify-center text-gray-400 hover:text-blue-500 hover:bg-blue-50 rounded-full transition-colors text-sm">
+                                                📝
+                                            </button>
+                                            <button @click="openOptionsModal(task)" class="w-7 h-7 flex items-center justify-center text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-full transition-colors font-bold">
+                                                ...
+                                            </button>
+                                        </div>
+                                    </div>
+                                </template>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+                <div x-show="pendingTasks.length === 0" class="text-center text-gray-400 py-10">
+                    <div class="text-4xl mb-2">✨</div>
+                    <p>ไม่มีงานค้างแล้วจ้า เก่งมาก!</p>
+                </div>
+            </div>
+
+            <!-- Completed/Skipped Tasks -->
+            <div x-show="completedTasks.length > 0" class="mt-8">
+                <h3 class="text-sm font-semibold text-gray-400 mb-3 ml-2">ประวัติของวันนี้ 📝</h3>
+                <div class="bg-gray-50/50 rounded-xl p-2 border border-gray-100">
+                    <template x-for="task in completedTasks" :key="task.id">
+                        <div class="flex items-center gap-2 py-1.5 border-b border-gray-100 last:border-0 px-1">
+                            <span class="text-green-400 text-xs font-bold shrink-0">✓</span>
+                            <span class="text-xs text-gray-400 line-through truncate flex-grow" x-text="task.title"></span>
+                            
+                            <div class="flex items-center gap-1.5 shrink-0">
+                                <span x-show="task.category" class="text-[9px] opacity-70" x-text="task.category?.icon_emoji"></span>
+                                <div x-show="task.assignment_type === 'MEMBER' && task.assigned_member_id" class="w-3.5 h-3.5 rounded-full flex items-center justify-center text-[7px] bg-gray-200 text-gray-500 opacity-70" x-text="getMember(task.assigned_member_id)?.avatar_emoji || getMember(task.assigned_member_id)?.name.charAt(0)"></div>
+                                <div x-show="task.assignment_type === 'ANYONE'" class="text-[8px] opacity-70">⭐</div>
+                                <button @click="openOptionsModal(task)" class="text-gray-400 hover:text-gray-600 font-black px-1 pb-1">...</button>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+            </div>
+
+        
+
+        <!-- View: Personal Dashboard (โปรไฟล์ของฉัน) -->
+        <div x-show="currentView === 'profile'" x-transition style="display: none;" class="p-4 overflow-y-auto pb-20">
+            <template x-if="currentMember">
+                <div>
+                    <div class="bg-white rounded-3xl p-6 shadow-sm mb-6 text-center relative">
+                        <div class="text-6xl mb-2" x-text="currentMember.avatar_emoji"></div>
+                        <h2 class="text-2xl font-bold text-gray-800" x-text="currentMember.name"></h2>
+                        <div class="mt-4 bg-pink-50 rounded-2xl p-4 inline-block min-w-[150px]">
+                            <div class="text-xs text-pink-500 font-bold mb-1">แต้มรวมสะสม 🌟</div>
+                            <div class="text-4xl font-black text-pink-600" x-text="myDashboard.score || 0"></div>
+                        </div>
+                    </div>
+                    
+                    <h3 class="font-bold text-gray-700 mb-3 ml-2">สถิติวันนี้ 📊</h3>
+                    <div class="grid grid-cols-3 gap-3 mb-6">
+                        <div class="bg-green-50 rounded-2xl p-3 text-center border border-green-100">
+                            <div class="text-2xl font-bold text-green-500" x-text="myDashboard.completed_today || 0"></div>
+                            <div class="text-[10px] text-green-700 mt-1 font-semibold">เสร็จแล้ว</div>
+                        </div>
+                        <div class="bg-orange-50 rounded-2xl p-3 text-center border border-orange-100">
+                            <div class="text-2xl font-bold text-orange-500" x-text="myDashboard.pending_today || 0"></div>
+                            <div class="text-[10px] text-orange-700 mt-1 font-semibold">ค้างอยู่</div>
+                        </div>
+                        <div class="bg-red-50 rounded-2xl p-3 text-center border border-red-100">
+                            <div class="text-2xl font-bold text-red-500" x-text="myDashboard.skipped_today || 0"></div>
+                            <div class="text-[10px] text-red-700 mt-1 font-semibold">ข้าม/ไม่ได้ทำ</div>
+                        </div>
+                    </div>
+
+                    <h3 class="font-bold text-gray-700 mb-3 ml-2">ความขยัน 7 วันย้อนหลัง 📈</h3>
+                    <div class="bg-white rounded-3xl p-5 shadow-sm mb-8 h-48 flex items-end justify-between gap-2">
+                        <template x-for="stat in myDashboard.weekly_stats" :key="stat.date">
+                            <div class="flex flex-col items-center flex-1 h-full justify-end group">
+                                <span class="text-[10px] text-gray-400 font-bold mb-1 opacity-0 group-hover:opacity-100 transition-opacity" x-text="stat.count"></span>
+                                <div class="w-full bg-pink-100 rounded-t-lg relative overflow-hidden flex items-end transition-all" style="min-height: 4px;" :style="`height: ${stat.height_percent}%`">
+                                    <div class="w-full bg-pink-400 absolute bottom-0 left-0 right-0 h-full origin-bottom transform scale-y-0 animate-[growUp_0.5s_ease-out_forwards]"></div>
+                                </div>
+                                <span class="text-[10px] text-gray-500 mt-2 font-medium" x-text="stat.label"></span>
+                            </div>
+                        </template>
+                    </div>
+
+                    <h3 class="font-bold text-gray-700 mb-3 ml-2 mt-8">สมุดพก Habit 📈</h3>
+                    <div class="grid grid-cols-2 gap-3 mb-4">
+                        <div class="bg-blue-50 rounded-2xl p-4 text-center border border-blue-100">
+                            <div class="text-2xl font-bold text-blue-500" x-text="myDashboard.habit_completed_month || 0"></div>
+                            <div class="text-[10px] text-blue-700 mt-1 font-semibold">Habit เดือนนี้</div>
+                        </div>
+                        <div class="bg-purple-50 rounded-2xl p-4 text-center border border-purple-100">
+                            <div class="text-2xl font-bold text-purple-500" x-text="myDashboard.habit_completed_year || 0"></div>
+                            <div class="text-[10px] text-purple-700 mt-1 font-semibold">Habit ปีนี้</div>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-white rounded-3xl p-4 shadow-sm mb-8">
+                        <div class="text-xs text-gray-400 mb-2 font-medium">สถิติความสม่ำเสมอรวม (90 วันย้อนหลัง)</div>
+                        <div class="flex flex-wrap gap-1">
+                            <template x-for="day in myDashboard.habit_heatmap" :key="day.date">
+                                <div class="w-3 h-3 rounded-[2px]" 
+                                     :class="{
+                                         'bg-gray-100': day.intensity === 0,
+                                         'bg-blue-200': day.intensity === 1,
+                                         'bg-blue-300': day.intensity === 2,
+                                         'bg-blue-500': day.intensity === 3,
+                                         'bg-blue-700': day.intensity === 4
+                                     }"
+                                     :title="day.date + ': ' + day.count + ' habits'"></div>
+                            </template>
+                        </div>
+                    </div>
+
+                    <h3 class="font-bold text-gray-700 mb-3 ml-2">สถิติราย Habit (30 วันย้อนหลัง) 🎯</h3>
+                    <div class="space-y-3 mb-8">
+                        <template x-for="habit in myDashboard.per_habit_stats" :key="habit.title">
+                            <div class="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
+                                <div class="font-bold text-gray-700 mb-2 text-sm" x-text="habit.title"></div>
+                                <div class="flex flex-wrap gap-1">
+                                    <template x-for="day in habit.history" :key="day.date">
+                                        <div class="w-3 h-3 rounded-full transition-colors" 
+                                             :class="day.completed ? 'bg-pink-400' : 'bg-gray-100'"
+                                             :title="day.date"></div>
+                                    </template>
+                                </div>
+                            </div>
+                        </template>
+                        <div x-show="!myDashboard.per_habit_stats || myDashboard.per_habit_stats.length === 0" class="text-xs text-gray-400 text-center py-4">
+                            คุณยังไม่มี Habit ส่วนตัว เริ่มสร้างเลย!
+                        </div>
+                    </div>
+
+                    <button @click="logout()" class="w-full bg-red-100 text-red-500 rounded-2xl py-3 font-bold hover:bg-red-200 transition-colors">
+                        🚪 ออกจากระบบ / สลับบัญชี
+                    </button>
+                </div>
+            </template>
+        </div>
+
+        
+
+        
+    
+        <!-- Bottom Navigation Bar -->
+        <nav class="flex justify-around items-center bg-white py-2 px-4 border-t border-gray-100 z-50 rounded-t-3xl sm:rounded-3xl mt-auto shadow-[0_-4px_15px_-5px_rgba(0,0,0,0.05)]">
+            <button @click="currentView = 'board'" :class="currentView === 'board' ? 'text-pink-500 bg-pink-50' : 'text-gray-400 hover:text-gray-600'" class="flex flex-col items-center py-1 px-4 rounded-2xl transition-all">
+                <span class="text-lg mb-0.5">📋</span>
+                <span class="text-[10px] font-bold">บอร์ดงาน</span>
+            </button>
+            <button @click="currentView = 'profile'; loadMyDashboard()" :class="currentView === 'profile' ? 'text-purple-500 bg-purple-50' : 'text-gray-400 hover:text-gray-600'" class="flex flex-col items-center py-1 px-4 rounded-2xl transition-all">
+                <span class="text-lg mb-0.5">👤</span>
+                <span class="text-[10px] font-bold">สถิติส่วนตัว</span>
+            </button>
+        </nav>
+
+    </main>
+
+    <!-- Modals -->
+    <!-- Add Task Modal -->
+    <div x-show="showAddTask" class="fixed inset-0 bg-black/30 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center" style="display: none;">
+        <div class="bg-white w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl p-6 transform transition-transform shadow-2xl" @click.outside="showAddTask = false">
+            <h3 class="text-xl font-bold mb-4">เพิ่มงานใหม่ ✨</h3>
+            <form @submit.prevent="createTask">
+                <div class="space-y-4">
+                    <!-- Step 1: Type Selector -->
+                    <div class="grid grid-cols-3 gap-2">
+                        <label class="flex flex-col items-center justify-center p-3 rounded-2xl border-2 cursor-pointer transition-colors"
+                               :class="newTask.type === 'TASK' ? 'border-pink-400 bg-pink-50' : 'border-gray-100 hover:bg-gray-50'">
+                            <input type="radio" x-model="newTask.type" value="TASK" class="hidden">
+                            <span class="text-2xl mb-1">📝</span>
+                            <span class="text-[10px] font-bold text-gray-600 text-center">งานทั่วไป</span>
+                        </label>
+                        <label class="flex flex-col items-center justify-center p-3 rounded-2xl border-2 cursor-pointer transition-colors"
+                               :class="newTask.type === 'SCHEDULE' ? 'border-orange-400 bg-orange-50' : 'border-gray-100 hover:bg-gray-50'">
+                            <input type="radio" x-model="newTask.type" value="SCHEDULE" class="hidden">
+                            <span class="text-2xl mb-1">⏰</span>
+                            <span class="text-[10px] font-bold text-gray-600 text-center">งานประจำ</span>
+                        </label>
+                        <label class="flex flex-col items-center justify-center p-3 rounded-2xl border-2 cursor-pointer transition-colors"
+                               :class="newTask.type === 'HABIT' ? 'border-blue-400 bg-blue-50' : 'border-gray-100 hover:bg-gray-50'">
+                            <input type="radio" x-model="newTask.type" value="HABIT" class="hidden">
+                            <span class="text-2xl mb-1">📈</span>
+                            <span class="text-[10px] font-bold text-gray-600 text-center">สร้างนิสัย</span>
+                        </label>
+                    </div>
+
+                    <!-- Step 2: Name -->
+                    <div>
+                        <input type="text" x-model="newTask.title" placeholder="ชื่องาน เช่น กรอกน้ำ, ซักผ้า..." required class="w-full bg-gray-50 border-none rounded-xl p-3 focus:ring-2 focus:ring-pink-300 font-bold text-gray-700">
+                    </div>
+
+                    <!-- Step 3: Time Block -->
+                    <div>
+                        <div class="text-xs font-bold text-gray-400 mb-2">ทำช่วงไหนดี?</div>
+                        <div class="grid grid-cols-4 gap-2">
+                            <label class="flex flex-col items-center p-2 rounded-xl border-2 cursor-pointer transition-colors"
+                                   :class="newTask.time_block === 'MORNING' ? 'border-blue-300 bg-blue-50' : 'border-gray-100 hover:bg-gray-50'">
+                                <input type="radio" x-model="newTask.time_block" value="MORNING" class="hidden">
+                                <span class="text-xl">🌅</span>
+                                <span class="text-[9px] font-bold text-gray-500 mt-1">เช้า</span>
+                            </label>
+                            <label class="flex flex-col items-center p-2 rounded-xl border-2 cursor-pointer transition-colors"
+                                   :class="newTask.time_block === 'AFTERNOON' ? 'border-orange-300 bg-orange-50' : 'border-gray-100 hover:bg-gray-50'">
+                                <input type="radio" x-model="newTask.time_block" value="AFTERNOON" class="hidden">
+                                <span class="text-xl">☀️</span>
+                                <span class="text-[9px] font-bold text-gray-500 mt-1">บ่าย</span>
+                            </label>
+                            <label class="flex flex-col items-center p-2 rounded-xl border-2 cursor-pointer transition-colors"
+                                   :class="newTask.time_block === 'EVENING' ? 'border-indigo-300 bg-indigo-50' : 'border-gray-100 hover:bg-gray-50'">
+                                <input type="radio" x-model="newTask.time_block" value="EVENING" class="hidden">
+                                <span class="text-xl">🌙</span>
+                                <span class="text-[9px] font-bold text-gray-500 mt-1">ค่ำ</span>
+                            </label>
+                            <label class="flex flex-col items-center p-2 rounded-xl border-2 cursor-pointer transition-colors"
+                                   :class="newTask.time_block === 'ANYTIME' ? 'border-gray-400 bg-gray-100' : 'border-gray-100 hover:bg-gray-50'">
+                                <input type="radio" x-model="newTask.time_block" value="ANYTIME" class="hidden">
+                                <span class="text-xl">⭐</span>
+                                <span class="text-[9px] font-bold text-gray-500 mt-1">เวลาไหนก็ได้</span>
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <details class="text-sm">
+                        <summary class="cursor-pointer text-gray-400 font-bold mb-2 outline-none">ตั้งค่าเพิ่มเติม (Optional)</summary>
+                        <div class="space-y-3 mt-3 bg-gray-50 p-4 rounded-2xl border border-gray-100">
+                            <div>
+                                <select x-model="newTask.category_id" class="w-full bg-white border-none rounded-xl p-2.5 shadow-sm focus:ring-2 focus:ring-pink-300 text-xs">
+                                    <option value="">หมวดหมู่ (เว้นว่าง = งานส่วนตัว)</option>
+                                    <template x-for="cat in categories" :key="cat.id">
+                                        <option :value="cat.id" x-text="cat.icon_emoji + ' ' + cat.name"></option>
+                                    </template>
+                                </select>
+                            </div>
+                            <div>
+                                <select x-model="newTask.assignment_type" class="w-full bg-white border-none rounded-xl p-2.5 shadow-sm focus:ring-2 focus:ring-pink-300 text-xs font-bold text-gray-700 mb-2">
+                                    <option value="MEMBER">👤 ระบุคนทำ (Member)</option>
+                                    <option value="ANYONE">⭐ ใครก็ได้ (Anyone)</option>
+                                    <option value="UNASSIGNED">❓ ยังว่างอยู่ (Unassigned)</option>
+                                </select>
+                                <select x-show="newTask.assignment_type === 'MEMBER'" x-model="newTask.assigned_member_id" class="w-full bg-pink-50 border-none rounded-xl p-2.5 shadow-sm focus:ring-2 focus:ring-pink-300 text-xs font-bold text-pink-700">
+                                    <template x-for="m in members" :key="m.id">
+                                        <option :value="m.id" x-text="m.avatar_emoji + ' ' + m.name"></option>
+                                    </template>
+                                </select>
+                            </div>
+                            <div>
+                                <input type="number" x-model="newTask.value_amount" placeholder="มูลค่าหรือรางวัล (บาท) 💵" class="w-full bg-green-50 border-none rounded-xl p-2.5 focus:ring-2 focus:ring-green-300 text-green-700 placeholder-green-400 font-bold text-xs">
+                            </div>
+                            <label class="flex items-center gap-2 text-gray-700 bg-red-50 p-2.5 rounded-xl border border-red-100 cursor-pointer">
+                                <input type="checkbox" x-model="newTask.has_penalty" class="rounded text-red-500 focus:ring-red-300 w-4 h-4">
+                                <span class="font-bold text-xs text-red-700">หักแต้มถ้ากดข้าม (ฝึกวินัยขั้นสูง) ❌</span>
+                            </label>
+                        </div>
+                    </details>
+                        
+                    <div x-show="newTask.type === 'SCHEDULE' || newTask.type === 'HABIT'" class="space-y-3 bg-orange-50/50 p-4 rounded-2xl border border-orange-100">
+                        <!-- Repeat Type -->
+                        <div class="flex items-center gap-2 mb-2">
+                            <span class="text-xl">⏰</span> <span class="font-bold text-orange-700 text-sm">การเกิดซ้ำ (Recurrence)</span>
+                        </div>
+                        <div x-show="newTask.type === 'HABIT'" class="text-[10px] text-orange-600 bg-orange-100 p-2 rounded-lg mb-2">
+                            💡 นิสัย (Habit) จะถูกตั้งค่าให้เกิดขึ้น "ทุกวัน" และจบหลังจาก "120 ครั้ง" เป็นค่าเริ่มต้น เพื่อการันตีการสร้างนิสัย หากต้องการเปลี่ยนสามารถแก้ด้านล่างได้
+                        </div>
+                        <div>
+                            <label class="text-xs text-gray-500 font-semibold mb-1 block">รูปแบบการเกิดซ้ำ:</label>
+                            <select x-model="newTask.repeat_type" class="w-full bg-white border-none rounded-xl p-2.5 text-sm focus:ring-2 focus:ring-orange-300 shadow-sm">
+                                    <option value="daily">🗓️ ทุกวัน</option>
+                                    <option value="weekly">🗓️ ทุกสัปดาห์ (เลือกวัน)</option>
+                                    <option value="monthly">🗓️ ทุกเดือน (เลือกวันที่)</option>
+                                    <option value="interval">🗓️ ทุกๆ X วัน</option>
+                                </select>
+                            </div>
+
+                            <!-- Weekly Options -->
+                            <div x-show="newTask.repeat_type === 'weekly'" class="flex flex-wrap gap-2 mt-2">
+                                <template x-for="day in [{v:1, l:'จ.'}, {v:2, l:'อ.'}, {v:3, l:'พ.'}, {v:4, l:'พฤ.'}, {v:5, l:'ศ.'}, {v:6, l:'ส.'}, {v:0, l:'อา.'}]">
+                                    <label class="flex items-center justify-center min-w-[32px] h-8 bg-white rounded-lg shadow-sm text-xs cursor-pointer border transition-colors" 
+                                           :class="newTask.weekly_days.includes(day.v) ? 'border-pink-400 bg-pink-100 text-pink-700 font-bold' : 'border-transparent text-gray-500'">
+                                        <input type="checkbox" :value="day.v" x-model="newTask.weekly_days" class="hidden">
+                                        <span x-text="day.l"></span>
+                                    </label>
+                                </template>
+                            </div>
+
+                            <!-- Monthly Options -->
+                            <div x-show="newTask.repeat_type === 'monthly'" class="flex items-center gap-2 mt-2">
+                                <span class="text-sm text-gray-600">ทุกวันที่:</span>
+                                <input type="number" min="1" max="31" x-model="newTask.monthly_date" class="w-16 bg-white border-none rounded-xl p-2 text-sm text-center shadow-sm">
+                            </div>
+
+                            <!-- Interval Options -->
+                            <div x-show="newTask.repeat_type === 'interval'" class="flex items-center gap-2 mt-2">
+                                <span class="text-sm text-gray-600">ทำทุกๆ:</span>
+                                <input type="number" min="1" max="365" x-model="newTask.interval_days" class="w-16 bg-white border-none rounded-xl p-2 text-sm text-center shadow-sm">
+                                <span class="text-sm text-gray-600">วัน</span>
+                            </div>
+
+                            <!-- End Condition -->
+                            <div class="mt-4 pt-3 border-t border-pink-100">
+                                <label class="text-xs text-gray-500 font-semibold mb-1 block">สิ้นสุดเมื่อ:</label>
+                                <select x-model="newTask.end_condition" class="w-full bg-white border-none rounded-xl p-2.5 text-sm focus:ring-2 focus:ring-orange-300 shadow-sm mb-2">
+                                    <option value="forever">♾️ ไม่มีที่สิ้นสุด</option>
+                                    <option value="count">🛑 ครบจำนวนครั้งที่กำหนด</option>
+                                </select>
+                                <div x-show="newTask.end_condition === 'count'" class="flex items-center gap-2">
+                                    <span class="text-sm text-gray-600">หยุดหลังจากสร้างไปแล้ว:</span>
+                                    <input type="number" min="1" x-model="newTask.recurrence_limit" class="w-16 bg-white border-none rounded-xl p-2 text-sm text-center shadow-sm">
+                                    <span class="text-sm text-gray-600">ครั้ง</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <button type="submit" class="w-full bg-pink-500 text-white rounded-xl py-3 font-bold hover:bg-pink-600 transition-colors btn-bounce">
+                        สร้างงานเลย!
+                    </button>
+                    <button type="button" @click="showAddTask = false" class="w-full bg-gray-100 text-gray-500 rounded-xl py-3 font-semibold mt-2 hover:bg-gray-200">
+                        ยกเลิก
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Add Member Modal -->
+    <div x-show="showAddMember" class="fixed inset-0 bg-black/30 backdrop-blur-sm z-50 flex items-center justify-center" style="display: none;">
+        <div class="bg-white w-full max-w-xs rounded-3xl p-6" @click.outside="showAddMember = false">
+            <h3 class="font-bold mb-4">เพิ่มสมาชิก</h3>
+            <form @submit.prevent="addMember">
+                <input type="text" x-model="newMember.name" placeholder="ชื่อ" required class="w-full bg-gray-50 rounded-xl p-3 mb-3">
+                <input type="text" x-model="newMember.avatar_emoji" placeholder="Emoji เช่น 🐶" class="w-full bg-gray-50 rounded-xl p-3 mb-3">
+                <button type="submit" class="w-full bg-pink-500 text-white rounded-xl py-2 font-bold mb-2">บันทึก</button>
+                <button type="button" @click="showAddMember = false" class="w-full bg-gray-100 text-gray-500 rounded-xl py-2 font-bold">ยกเลิก</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Add Category Modal -->
+    <div x-show="showAddCategory" class="fixed inset-0 bg-black/30 backdrop-blur-sm z-50 flex items-center justify-center" style="display: none;">
+        <div class="bg-white w-full max-w-xs rounded-3xl p-6" @click.outside="showAddCategory = false">
+            <h3 class="font-bold mb-4">เพิ่มหมวดหมู่</h3>
+            <form @submit.prevent="addCategory">
+                <input type="text" x-model="newCategory.name" placeholder="ชื่อหมวด" required class="w-full bg-gray-50 rounded-xl p-3 mb-3">
+                <input type="text" x-model="newCategory.icon_emoji" placeholder="Emoji เช่น 🧹" required class="w-full bg-gray-50 rounded-xl p-3 mb-3">
+                <input type="color" x-model="newCategory.color_code" class="w-full h-10 mb-3 rounded-xl cursor-pointer">
+                <select x-model="newCategory.rule.rule_type" class="w-full bg-gray-50 rounded-xl p-3 mb-4">
+                    <option value="NONE">ไม่มีกฎ (NONE)</option>
+                    <option value="ROUND_ROBIN">เวียนคน (ROUND_ROBIN)</option>
+                    <option value="RANDOM">สุ่ม (RANDOM)</option>
+                </select>
+                <button type="submit" class="w-full bg-blue-500 text-white rounded-xl py-2 font-bold mb-2">บันทึก</button>
+                <button type="button" @click="showAddCategory = false" class="w-full bg-gray-100 text-gray-500 rounded-xl py-2 font-bold">ยกเลิก</button>
+            </form>
+        </div>
+    </div>
+
+    
+    
+    
+    <!-- Options Modal -->
+    <div x-show="showOptionsModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex flex-col justify-end p-4 pb-8" style="display: none;">
+        <div class="bg-white w-full max-w-sm mx-auto rounded-3xl p-4 shadow-2xl relative" @click.outside="showOptionsModal = false">
+            <div class="w-12 h-1.5 bg-gray-200 rounded-full mx-auto mb-4"></div>
+            
+            <h3 class="text-lg font-bold text-gray-800 mb-1 px-2" x-text="taskToPlan?.title"></h3>
+            <p class="text-xs text-gray-500 mb-4 px-2 border-b border-gray-100 pb-3">ตัวเลือกเพิ่มเติม</p>
+            
+            <div class="space-y-2">
+                <template x-if="taskToPlan?.status === 'Pending'">
+                    <button @click="showOptionsModal = false; openPlanModal(taskToPlan)" class="w-full text-left px-4 py-3 rounded-2xl hover:bg-orange-50 text-orange-600 font-bold transition-colors flex items-center gap-3">
+                        <span class="text-xl">🗓️</span> เลื่อนวัน / วางแผน (Plan)
+                    </button>
+                </template>
+                
+                <template x-if="taskToPlan?.status === 'Pending'">
+                    <button @click="showOptionsModal = false; skipPlanTask()" class="w-full text-left px-4 py-3 rounded-2xl hover:bg-gray-100 text-gray-600 font-bold transition-colors flex items-center gap-3">
+                        <span class="text-xl">❌</span> ข้ามงานนี้ (Skip)
+                    </button>
+                </template>
+                
+                <template x-if="taskToPlan?.status !== 'Pending'">
+                    <button @click="revertOptionsTask()" class="w-full text-left px-4 py-3 rounded-2xl hover:bg-yellow-50 text-yellow-600 font-bold transition-colors flex items-center gap-3">
+                        <span class="text-xl">⏪</span> ยกเลิกสถานะ / ให้ทำใหม่
+                    </button>
+                </template>
+                
+                <button @click="showOptionsModal = false; openHistoryModal(taskToPlan)" class="w-full text-left px-4 py-3 rounded-2xl hover:bg-blue-50 text-blue-600 font-bold transition-colors flex items-center gap-3">
+                    <span class="text-xl">📜</span> ดูประวัติและโน้ตทั้งหมด (History)
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- History Modal -->
+    <div x-show="showHistoryModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4" style="display: none;">
+        <div class="bg-white w-full max-w-sm rounded-3xl p-6 shadow-2xl relative max-h-[80vh] flex flex-col" @click.outside="showHistoryModal = false">
+            <button @click="showHistoryModal = false" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 bg-gray-100 rounded-full w-8 h-8 flex items-center justify-center font-bold">✕</button>
+            
+            <h3 class="text-xl font-black text-gray-800 mb-4 pr-8">📜 ประวัติงาน</h3>
+            
+            <div class="overflow-y-auto flex-grow pr-1">
+                <template x-if="!taskToPlan?.action_history || taskToPlan.action_history.length === 0">
+                    <p class="text-gray-400 text-center py-4 text-sm">ยังไม่มีประวัติการทำ</p>
+                </template>
+                <div class="flex flex-col">
+                    <template x-for="(hist, index) in taskToPlan?.action_history" :key="index">
+                        <div class="bg-white border-b border-gray-100 py-2.5 last:border-0 flex flex-col gap-1.5">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center gap-2">
+                                    <span class="text-xs font-bold"
+                                          :class="hist.action === 'COMPLETED' ? 'text-green-600' : (hist.action === 'REVERTED' || hist.action === 'SKIPPED' ? 'text-red-500' : 'text-blue-500')"
+                                          x-text="hist.action === 'COMPLETED' ? '✓ เสร็จ' : (hist.action === 'REVERTED' ? '↩️ ย้อนกลับ' : (hist.action === 'SKIPPED' ? '⏭️ ข้าม' : hist.action))"></span>
+                                    <span x-show="hist.member_id" class="text-[10px] text-gray-500 bg-gray-50 px-1.5 py-0.5 rounded-md" x-text="getMember(hist.member_id)?.name || ''"></span>
+                                </div>
+                                <span class="text-[9px] text-gray-400" x-text="new Date(hist.timestamp).toLocaleString('th-TH', {month: 'short', day: 'numeric', hour: '2-digit', minute:'2-digit'})"></span>
+                            </div>
+                            <div x-show="hist.note" class="text-[11px] text-gray-600 bg-yellow-50/50 p-1.5 rounded border border-yellow-100/50 whitespace-pre-wrap leading-tight" x-text="hist.note"></div>
+                            <div x-show="hist.image_path" class="mt-0.5">
+                                <img :src="hist.image_path" class="max-h-24 rounded border border-gray-100 object-cover">
+                            </div>
+                        </div>
+                    </template>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Plan Task Modal -->
+    <div x-show="showPlanModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4" style="display: none;">
+        <div class="bg-white w-full max-w-sm rounded-3xl p-6 shadow-2xl relative" @click.outside="showPlanModal = false">
+            <button @click="showPlanModal = false" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 bg-gray-100 rounded-full w-8 h-8 flex items-center justify-center font-bold">✕</button>
+            
+            <h3 class="text-xl font-black text-gray-800 mb-2 pr-8" x-text="taskToPlan?.title"></h3>
+            <p class="text-sm text-gray-500 mb-6 border-b border-gray-100 pb-4">กรุณาเลือกวันที่จะทำ หรือย้ายมาทำวันนี้</p>
+            
+            <div class="space-y-4">
+                <!-- Select Date -->
+                <div>
+                    <label class="block text-sm font-bold text-gray-700 mb-2">ย้ายไปวันที่</label>
+                    <div class="flex overflow-x-auto gap-3 pb-2 scrollbar-hide">
+                        <template x-for="day in days" :key="day.date">
+                            <button type="button" @click="planTargetDate = day.date" 
+                                    :class="planTargetDate === day.date ? 'bg-orange-400 text-white shadow-lg border-transparent' : 'bg-white text-gray-500 border border-gray-200 hover:bg-orange-50'"
+                                    class="flex flex-col items-center min-w-[70px] p-2 rounded-2xl transition-all btn-bounce focus:outline-none">
+                                <span class="text-[10px] font-bold" x-text="day.label"></span>
+                                <span class="text-lg mt-1 font-black" x-text="new Date(day.date).getDate()"></span>
+                            </button>
+                        </template>
+                    </div>
+                </div>
+
+                <!-- Select Time Block -->
+                <div x-show="planTargetDate === selectedDate">
+                    <label class="block text-sm font-bold text-gray-700 mb-2 mt-4">ช่วงเวลาที่คิดว่าจะทำ (สำหรับวันนี้)</label>
+                    <div class="grid grid-cols-2 gap-2">
+                        <button @click="planTargetTimeBlock = 'MORNING'" class="px-3 py-2 rounded-xl text-sm font-bold border transition-colors" :class="planTargetTimeBlock === 'MORNING' ? 'bg-orange-100 border-orange-400 text-orange-700' : 'bg-white border-gray-200 text-gray-500'">🌅 เช้า</button>
+                        <button @click="planTargetTimeBlock = 'AFTERNOON'" class="px-3 py-2 rounded-xl text-sm font-bold border transition-colors" :class="planTargetTimeBlock === 'AFTERNOON' ? 'bg-orange-100 border-orange-400 text-orange-700' : 'bg-white border-gray-200 text-gray-500'">☀️ บ่าย</button>
+                        <button @click="planTargetTimeBlock = 'EVENING'" class="px-3 py-2 rounded-xl text-sm font-bold border transition-colors" :class="planTargetTimeBlock === 'EVENING' ? 'bg-orange-100 border-orange-400 text-orange-700' : 'bg-white border-gray-200 text-gray-500'">🌙 เย็น</button>
+                        <button @click="planTargetTimeBlock = 'ANYTIME'" class="px-3 py-2 rounded-xl text-sm font-bold border transition-colors" :class="planTargetTimeBlock === 'ANYTIME' ? 'bg-orange-100 border-orange-400 text-orange-700' : 'bg-white border-gray-200 text-gray-500'">⏰ ตอนไหนก็ได้</button>
+                    </div>
+                </div>
+
+                <div class="pt-4 border-t border-gray-100 mt-6 flex flex-col gap-2">
+                    <button @click="submitPlan()" :disabled="isSubmittingPlan" class="w-full bg-orange-500 text-white font-bold py-3.5 rounded-2xl hover:bg-orange-600 shadow-md transition-all disabled:opacity-50 btn-bounce text-sm">
+                        📌 บันทึกแผน (Reschedule)
+                    </button>
+                    <button @click="skipPlanTask()" :disabled="isSubmittingPlan" class="w-full bg-red-50 text-red-500 border border-red-100 font-bold py-3 rounded-2xl hover:bg-red-100 transition-colors mt-1 text-sm disabled:opacity-50">
+                        ❌ ข้ามงานนี้ไปเลย
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+        <!-- Note Modal -->
+    <div x-show="showTaskDetails" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4" style="display: none;">
+        <div class="bg-white w-full max-w-sm rounded-3xl p-6 shadow-2xl relative" @click.outside="showTaskDetails = false">
+            <button @click="showTaskDetails = false" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 bg-gray-100 rounded-full w-8 h-8 flex items-center justify-center font-bold">✕</button>
+            
+            <h3 class="text-xl font-black text-gray-800 mb-2 pr-8">📝 จดโน้ต</h3>
+            <p class="text-sm font-bold text-pink-500 mb-6 border-b border-gray-100 pb-4 truncate" x-text="selectedTask?.title"></p>
+            
+            <div class="space-y-4">
+                <textarea x-model="actionNote" placeholder="พิมพ์โน้ตของคุณที่นี่..." class="w-full bg-gray-50 border-none rounded-xl p-3 focus:ring-2 focus:ring-pink-300 text-sm resize-none h-24 text-gray-700 font-medium placeholder-gray-400"></textarea>
+                
+                <div>
+                    <label class="flex items-center justify-center gap-2 cursor-pointer bg-white p-3 rounded-xl hover:bg-gray-50 transition-colors border-2 border-dashed border-gray-300 text-sm font-bold text-gray-500">
+                        <span class="text-xl">📷</span>
+                        <span x-text="actionFile ? 'แนบไฟล์แล้วคลิกเพื่อเปลี่ยน' : (actionImagePreview ? 'มีรูปภาพเก่า คลิกเพื่อเปลี่ยน' : 'แนบรูปภาพเพิ่มเติม')"></span>
+                        <input type="file" accept="image/*" @change="handleActionImageSelect" class="hidden">
+                    </label>
+                    <div x-show="actionImagePreview" class="mt-3 relative inline-block">
+                        <img :src="actionImagePreview" class="h-32 rounded-xl shadow-sm border border-gray-200 object-cover">
+                        <button @click="actionFile = null; actionImagePreview = null" class="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs shadow-md hover:bg-red-600 transition-colors">✕</button>
+                    </div>
+                </div>
+                
+                <button @click="submitTaskAction('NOTE')" :disabled="isSubmittingAction" class="w-full bg-pink-500 text-white font-bold py-3.5 rounded-2xl hover:bg-pink-600 shadow-md transition-all disabled:opacity-50 btn-bounce text-sm mt-2">
+                    💾 บันทึกโน้ต
+                </button>
+            </div>
+        </div>
+    </div>
+    </div>
+
+
+    <audio id="chimeSound" src="https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3" preload="auto"></audio>
+</body>
+    <audio id="chimeSound" src="https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3" preload="auto"></audio>
+</body>
+</html>

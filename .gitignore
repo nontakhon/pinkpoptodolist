@@ -1,0 +1,18 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+venv/
+env/
+.venv/
+
+# DB
+*.sqlite3
+*.db
+
+# macOS
+.DS_Store
+
+# Archive
+archive/

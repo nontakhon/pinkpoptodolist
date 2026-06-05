@@ -1,0 +1,23 @@
+.font-kanit {
+    font-family: 'Kanit', sans-serif;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+    display: none;
+}
+.scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+
+.btn-bounce {
+    transition: transform 150ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+.btn-bounce:active {
+    transform: scale(0.95);
+}
+
+@keyframes growUp {
+    0% { transform: scaleY(0); }
+    100% { transform: scaleY(1); }
+}

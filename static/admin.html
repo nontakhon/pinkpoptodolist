@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Admin Dashboard - pinkpop</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Mali:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', 'Mali', sans-serif; background-color: #f8fafc; }
+        .tab-active { background-color: #EFF6FF; color: #2563EB; font-weight: 700; }
+        .tab-inactive { color: #64748B; }
+        .tab-inactive:hover { background-color: #F1F5F9; color: #0F172A; }
+    </style>
+</head>
+<body x-data="adminData">
+    <div class="flex h-screen overflow-hidden">
+        
+        <!-- Sidebar -->
+        <div class="w-64 bg-white border-r border-gray-200 flex-shrink-0 hidden md:flex flex-col">
+            <div class="p-6 border-b border-gray-100">
+                <h1 class="text-2xl font-black text-gray-800">Admin Panel</h1>
+                <p class="text-sm text-gray-500 mt-1">pinkpop App</p>
+            </div>
+            <div class="flex-1 p-4 space-y-2 overflow-y-auto">
+                <button @click="currentView = 'dashboard'" :class="currentView === 'dashboard' ? 'tab-active' : 'tab-inactive'" class="w-full text-left px-4 py-3 rounded-xl transition-all flex items-center gap-3">
+                    <span class="text-xl">📊</span> Dashboard
+                </button>
+                <button @click="currentView = 'finance'" :class="currentView === 'finance' ? 'tab-active' : 'tab-inactive'" class="w-full text-left px-4 py-3 rounded-xl transition-all flex items-center gap-3">
+                    <span class="text-xl">💰</span> Finance
+                </button>
+                <button @click="currentView = 'tasks'" :class="currentView === 'tasks' ? 'tab-active' : 'tab-inactive'" class="w-full text-left px-4 py-3 rounded-xl transition-all flex items-center gap-3">
+                    <span class="text-xl">📋</span> Tasks
+                </button>
+                <button @click="currentView = 'master'" :class="currentView === 'master' ? 'tab-active' : 'tab-inactive'" class="w-full text-left px-4 py-3 rounded-xl transition-all flex items-center gap-3">
+                    <span class="text-xl">⚙️</span> Master Data
+                </button>
+            </div>
+            <div class="p-4 border-t border-gray-100">
+                <a href="/" class="w-full text-center block px-4 py-2 text-sm text-gray-500 hover:bg-gray-100 rounded-lg">← Back to App</a>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="flex-1 overflow-y-auto relative pb-24 md:pb-0">
+            <!-- Mobile Header -->
+            <div class="md:hidden bg-white p-4 border-b border-gray-200 flex justify-between items-center sticky top-0 z-20">
+                <h1 class="text-xl font-black text-gray-800">Admin Panel</h1>
+                <a href="/" class="text-sm text-gray-500">← App</a>
+            </div>
+
+            <div class="p-4 md:p-8 max-w-7xl mx-auto">
+                
+                <!-- 1. DASHBOARD -->
+                <div x-show="currentView === 'dashboard'" style="display: none;">
+                    <h2 class="text-2xl font-black text-gray-800 mb-6">ภาพรวม (Dashboard)</h2>
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
+                            <h3 class="font-bold text-gray-700 mb-4">สมาชิกที่ใช้งาน (รายวัน)</h3>
+                            <div class="h-64 relative"><canvas id="loginChart"></canvas></div>
+                        </div>
+                        <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
+                            <h3 class="font-bold text-gray-700 mb-4">งานที่ทำเสร็จ vs ค้าง (รายวัน)</h3>
+                            <div class="h-64 relative"><canvas id="taskChart"></canvas></div>
+                        </div>
+                        <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 lg:col-span-2">
+                            <h3 class="font-bold text-gray-700 mb-4">สัดส่วนงานที่ทำเสร็จของเดือนนี้ (รายคน)</h3>
+                            <div class="h-64 relative"><canvas id="memberChart"></canvas></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 2. FINANCE -->
+                <div x-show="currentView === 'finance'" style="display: none;">
+                    <h2 class="text-2xl font-black text-gray-800 mb-6">บัญชีรายรับ (Finance)</h2>
+                    
+                    <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 mb-6">
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                            <div>
+                                <label class="text-xs font-bold text-gray-500 block mb-1">เดือน</label>
+                                <select x-model="financeFilter.month" class="w-full bg-gray-50 border border-gray-200 rounded-xl p-2.5">
+                                    <template x-for="m in 12">
+                                        <option :value="m" x-text="'เดือน ' + m"></option>
+                                    </template>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="text-xs font-bold text-gray-500 block mb-1">ปี</label>
+                                <select x-model="financeFilter.year" class="w-full bg-gray-50 border border-gray-200 rounded-xl p-2.5">
+                                    <option value="2026">2026</option>
+                                    <option value="2027">2027</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="text-xs font-bold text-gray-500 block mb-1">สมาชิก</label>
+                                <select x-model="financeFilter.member_id" class="w-full bg-gray-50 border border-gray-200 rounded-xl p-2.5">
+                                    <option value="">-- ทุกคน --</option>
+                                    <template x-for="m in members" :key="m.id">
+                                        <option :value="m.id" x-text="m.name"></option>
+                                    </template>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="flex items-center justify-between bg-green-50 p-4 rounded-xl border border-green-100">
+                            <span class="text-green-800 font-bold">ยอดรวมทั้งหมด</span>
+                            <span class="text-3xl font-black text-green-600" x-text="'฿' + (financeData.total_amount || 0)"></span>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                        <table class="w-full text-left text-sm">
+                            <thead class="bg-gray-50 text-gray-500">
+                                <tr>
+                                    <th class="p-4 font-semibold">วันที่ทำสำเร็จ</th>
+                                    <th class="p-4 font-semibold">ชื่องาน</th>
+                                    <th class="p-4 font-semibold">คนทำ</th>
+                                    <th class="p-4 font-semibold text-right">จำนวนเงิน (฿)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <template x-if="!financeData.records || financeData.records.length === 0">
+                                    <tr><td colspan="4" class="p-8 text-center text-gray-400">ไม่มีข้อมูล</td></tr>
+                                </template>
+                                <template x-for="rec in financeData.records" :key="rec.id">
+                                    <tr class="border-t border-gray-50 hover:bg-gray-50">
+                                        <td class="p-4" x-text="rec.due_date"></td>
+                                        <td class="p-4 font-medium text-gray-800" x-text="rec.title"></td>
+                                        <td class="p-4" x-text="rec.member_name"></td>
+                                        <td class="p-4 text-right font-bold text-green-600" x-text="rec.amount"></td>
+                                    </tr>
+                                </template>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- 3. TASKS -->
+                <div x-show="currentView === 'tasks'" style="display: none;">
+                    <h2 class="text-2xl font-black text-gray-800 mb-6">จัดการงาน (Tasks)</h2>
+                    
+                    <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 mb-6">
+                        <h3 class="font-bold text-gray-700 mb-4 text-xl">สร้างงาน (รองรับ งานประจำ / สร้างนิสัย)</h3>
+                        <div class="max-w-2xl bg-gray-50 p-6 rounded-2xl border border-gray-100 space-y-4">
+                            <!-- Type Selection -->
+                            <div class="grid grid-cols-3 gap-2 mb-3">
+                                <label class="flex flex-col items-center justify-center p-3 rounded-2xl border-2 cursor-pointer transition-colors"
+                                       :class="newTask.type === 'TASK' ? 'border-pink-400 bg-pink-50' : 'border-gray-100 hover:bg-gray-50'">
+                                    <input type="radio" x-model="newTask.type" value="TASK" class="hidden">
+                                    <span class="text-2xl mb-1">📝</span>
+                                    <span class="text-[10px] font-bold text-gray-600 text-center">งานทั่วไป</span>
+                                </label>
+                                <label class="flex flex-col items-center justify-center p-3 rounded-2xl border-2 cursor-pointer transition-colors"
+                                       :class="newTask.type === 'SCHEDULE' ? 'border-orange-400 bg-orange-50' : 'border-gray-100 hover:bg-gray-50'">
+                                    <input type="radio" x-model="newTask.type" value="SCHEDULE" class="hidden">
+                                    <span class="text-2xl mb-1">⏰</span>
+                                    <span class="text-[10px] font-bold text-gray-600 text-center">งานประจำ</span>
+                                </label>
+                                <label class="flex flex-col items-center justify-center p-3 rounded-2xl border-2 cursor-pointer transition-colors"
+                                       :class="newTask.type === 'HABIT' ? 'border-blue-400 bg-blue-50' : 'border-gray-100 hover:bg-gray-50'">
+                                    <input type="radio" x-model="newTask.type" value="HABIT" class="hidden">
+                                    <span class="text-2xl mb-1">📈</span>
+                                    <span class="text-[10px] font-bold text-gray-600 text-center">สร้างนิสัย</span>
+                                </label>
+                            </div>
+
+                            <!-- Name -->
+                            <div>
+                                <input type="text" x-model="newTask.title" placeholder="ชื่องาน เช่น กรอกน้ำ, ซักผ้า..." required class="w-full bg-white border border-gray-200 rounded-xl p-3 focus:ring-2 focus:ring-pink-300 font-bold text-gray-700">
+                            </div>
+
+                            <!-- Time Block -->
+                            <div>
+                                <div class="text-xs font-bold text-gray-400 mb-2">ทำช่วงไหนดี?</div>
+                                <div class="grid grid-cols-4 gap-2">
+                                    <label class="flex flex-col items-center p-2 rounded-xl border-2 cursor-pointer transition-colors"
+                                           :class="newTask.time_block === 'MORNING' ? 'border-blue-300 bg-blue-50' : 'border-gray-100 hover:bg-white'">
+                                        <input type="radio" x-model="newTask.time_block" value="MORNING" class="hidden">
+                                        <span class="text-xl">🌅</span>
+                                        <span class="text-[9px] font-bold text-gray-500 mt-1">เช้า</span>
+                                    </label>
+                                    <label class="flex flex-col items-center p-2 rounded-xl border-2 cursor-pointer transition-colors"
+                                           :class="newTask.time_block === 'AFTERNOON' ? 'border-orange-300 bg-orange-50' : 'border-gray-100 hover:bg-white'">
+                                        <input type="radio" x-model="newTask.time_block" value="AFTERNOON" class="hidden">
+                                        <span class="text-xl">☀️</span>
+                                        <span class="text-[9px] font-bold text-gray-500 mt-1">บ่าย</span>
+                                    </label>
+                                    <label class="flex flex-col items-center p-2 rounded-xl border-2 cursor-pointer transition-colors"
+                                           :class="newTask.time_block === 'EVENING' ? 'border-indigo-300 bg-indigo-50' : 'border-gray-100 hover:bg-white'">
+                                        <input type="radio" x-model="newTask.time_block" value="EVENING" class="hidden">
+                                        <span class="text-xl">🌙</span>
+                                        <span class="text-[9px] font-bold text-gray-500 mt-1">ค่ำ</span>
+                                    </label>
+                                    <label class="flex flex-col items-center p-2 rounded-xl border-2 cursor-pointer transition-colors"
+                                           :class="newTask.time_block === 'ANYTIME' ? 'border-gray-400 bg-gray-200' : 'border-gray-100 hover:bg-white'">
+                                        <input type="radio" x-model="newTask.time_block" value="ANYTIME" class="hidden">
+                                        <span class="text-xl">⭐</span>
+                                        <span class="text-[9px] font-bold text-gray-500 mt-1">เวลาไหนก็ได้</span>
+                                    </label>
+                                </div>
+                            </div>
+                            
+                            <div class="space-y-3 mt-3 bg-white p-4 rounded-2xl border border-gray-100 shadow-sm">
+                                <div>
+                                    <select x-model="newTask.category_id" class="w-full bg-gray-50 border border-gray-100 rounded-xl p-2.5 focus:ring-2 focus:ring-pink-300 text-sm">
+                                        <option value="">หมวดหมู่ (เว้นว่าง = งานส่วนตัว)</option>
+                                        <template x-for="cat in categories" :key="cat.id">
+                                            <option :value="cat.id" x-text="cat.icon_emoji + ' ' + cat.name"></option>
+                                        </template>
+                                    </select>
+                                </div>
+                                <div>
+                                    <select x-model="newTask.assignment_type" class="w-full bg-gray-50 border border-gray-100 rounded-xl p-2.5 focus:ring-2 focus:ring-pink-300 text-sm font-bold text-gray-700 mb-2">
+                                        <option value="ANYONE">⭐ ใครก็ได้ (Anyone)</option>
+                                        <option value="MEMBER">👤 ระบุคนทำ (Member)</option>
+                                        <option value="UNASSIGNED">❓ ยังว่างอยู่ (Unassigned)</option>
+                                    </select>
+                                    <select x-show="newTask.assignment_type === 'MEMBER'" x-model="newTask.assigned_member_id" class="w-full bg-pink-50 border-none rounded-xl p-2.5 shadow-sm focus:ring-2 focus:ring-pink-300 text-sm font-bold text-pink-700">
+                                        <template x-for="m in members" :key="m.id">
+                                            <option :value="m.id" x-text="m.avatar_emoji + ' ' + m.name"></option>
+                                        </template>
+                                    </select>
+                                </div>
+                                <div>
+                                    <input type="number" x-model="newTask.value_amount" placeholder="มูลค่าหรือรางวัล (บาท) 💵" class="w-full bg-green-50 border-none rounded-xl p-2.5 focus:ring-2 focus:ring-green-300 text-green-700 placeholder-green-400 font-bold text-sm">
+                                </div>
+                                <label class="flex items-center gap-2 text-gray-700 bg-red-50 p-2.5 rounded-xl border border-red-100 cursor-pointer">
+                                    <input type="checkbox" x-model="newTask.has_penalty" class="rounded text-red-500 focus:ring-red-300 w-4 h-4">
+                                    <span class="font-bold text-sm text-red-700">หักแต้มถ้ากดข้าม (ฝึกวินัยขั้นสูง) ❌</span>
+                                </label>
+                            </div>
+                                
+                            <div x-show="newTask.type === 'SCHEDULE' || newTask.type === 'HABIT'" class="space-y-3 bg-orange-50/50 p-4 rounded-2xl border border-orange-100">
+                                <div class="flex items-center gap-2 mb-2">
+                                    <span class="text-xl">⏰</span> <span class="font-bold text-orange-700 text-sm">การเกิดซ้ำ (Recurrence)</span>
+                                </div>
+                                
+                                <select x-model="newTask.repeat_type" class="w-full bg-white border border-orange-200 rounded-xl p-2.5 focus:ring-2 focus:ring-orange-300 text-sm font-bold text-gray-700">
+                                    <option value="daily">📅 ทำทุกวัน / เว้นวัน</option>
+                                    <option value="weekly">📆 ทำรายสัปดาห์ (เลือกวัน)</option>
+                                    <option value="monthly">🗓️ ทำรายเดือน (เลือกวันที่)</option>
+                                </select>
+                                
+                                <div x-show="newTask.repeat_type === 'daily'" class="flex items-center gap-2">
+                                    <span class="text-sm text-gray-600">ทำทุกๆ</span>
+                                    <input type="number" x-model="newTask.interval_days" min="1" class="w-16 bg-white border border-gray-200 rounded-lg p-1.5 text-center font-bold">
+                                    <span class="text-sm text-gray-600">วัน</span>
+                                </div>
+                                
+                                <div x-show="newTask.repeat_type === 'weekly'" class="flex flex-wrap gap-2">
+                                    <template x-for="(day, index) in ['อา.', 'จ.', 'อ.', 'พ.', 'พฤ.', 'ศ.', 'ส.']" :key="index">
+                                        <label class="flex items-center justify-center w-10 h-10 rounded-full border-2 cursor-pointer transition-colors"
+                                               :class="newTask.weekly_days.includes(index.toString()) ? 'border-orange-400 bg-orange-500 text-white font-bold' : 'border-gray-200 bg-white text-gray-500 hover:bg-gray-50'">
+                                            <input type="checkbox" :value="index.toString()" x-model="newTask.weekly_days" class="hidden">
+                                            <span class="text-xs" x-text="day"></span>
+                                        </label>
+                                    </template>
+                                </div>
+                                
+                                <div x-show="newTask.repeat_type === 'monthly'" class="flex items-center gap-2">
+                                    <span class="text-sm text-gray-600">ทำวันที่</span>
+                                    <input type="number" x-model="newTask.monthly_date" min="1" max="31" class="w-16 bg-white border border-gray-200 rounded-lg p-1.5 text-center font-bold">
+                                    <span class="text-sm text-gray-600">ของทุกเดือน</span>
+                                </div>
+                                
+                                <hr class="border-orange-200 my-2">
+                                
+                                <div class="text-xs font-bold text-orange-700 mb-2">สิ้นสุดเมื่อไร?</div>
+                                <select x-model="newTask.end_condition" class="w-full bg-white border border-orange-200 rounded-xl p-2.5 focus:ring-2 focus:ring-orange-300 text-sm font-bold text-gray-700">
+                                    <option value="never">♾️ ทำไปเรื่อยๆ (ไม่มีที่สิ้นสุด)</option>
+                                    <option value="count">🎯 กำหนดจำนวนครั้ง</option>
+                                </select>
+                                
+                                <div x-show="newTask.end_condition === 'count'" class="flex items-center gap-2 mt-2">
+                                    <span class="text-sm text-gray-600">ทำทั้งหมด</span>
+                                    <input type="number" x-model="newTask.recurrence_limit" min="1" class="w-20 bg-white border border-gray-200 rounded-lg p-1.5 text-center font-bold text-orange-600">
+                                    <span class="text-sm text-gray-600">ครั้ง</span>
+                                </div>
+                            </div>
+
+                            <button @click="createTask()" class="w-full bg-pink-500 text-white font-black py-4 rounded-xl shadow-lg hover:bg-pink-600 transition-colors mt-4 text-lg">
+                                ✨ สร้างงานนี้เลย!
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                        <table class="w-full text-left text-sm">
+                            <thead class="bg-gray-50 text-gray-500">
+                                <tr>
+                                    <th class="p-4 font-semibold">ID</th>
+                                    <th class="p-4 font-semibold">ชื่องาน</th>
+                                    <th class="p-4 font-semibold">สถานะ</th>
+                                    <th class="p-4 font-semibold">วันที่</th>
+                                    <th class="p-4 font-semibold text-right">จัดการ</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <template x-for="task in tasks.slice(0, 50)" :key="task.id">
+                                    <tr class="border-t border-gray-50 hover:bg-gray-50">
+                                        <td class="p-4 text-xs text-gray-400" x-text="'#'+task.id"></td>
+                                        <td class="p-4 font-medium text-gray-800">
+                                            <span x-text="task.title"></span>
+                                            <span x-show="task.category_id" class="ml-2 text-xs text-gray-400" x-text="getCategory(task.category_id)?.icon_emoji"></span>
+                                        </td>
+                                        <td class="p-4">
+                                            <span class="px-2 py-1 rounded text-xs font-bold"
+                                                  :class="task.status === 'Completed' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'"
+                                                  x-text="task.status"></span>
+                                        </td>
+                                        <td class="p-4 text-gray-500" x-text="task.due_date || 'Template'"></td>
+                                        <td class="p-4 text-right">
+                                            <button @click="deleteTask(task.id)" class="text-red-400 hover:text-red-600 p-2 rounded-lg hover:bg-red-50">🗑️</button>
+                                        </td>
+                                    </tr>
+                                </template>
+                            </tbody>
+                        </table>
+                        <div class="p-4 text-center text-xs text-gray-400 bg-gray-50">แสดงข้อมูลล่าสุด 50 รายการ</div>
+                    </div>
+                </div>
+
+                <!-- 4. MASTER DATA -->
+                <div x-show="currentView === 'master'" style="display: none;">
+                    <h2 class="text-2xl font-black text-gray-800 mb-6">ตั้งค่าข้อมูลหลัก (Master Data)</h2>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        
+                        <!-- Members -->
+                        <div>
+                            <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 mb-6">
+                                <h3 class="font-bold text-gray-700 mb-4 text-lg">เพิ่มสมาชิก</h3>
+                                <div class="flex gap-2">
+                                    <input type="text" x-model="newMember.avatar_emoji" placeholder="อีโมจิ" class="w-16 bg-gray-50 border border-gray-200 rounded-xl p-2.5 text-center">
+                                    <input type="text" x-model="newMember.name" placeholder="ชื่อสมาชิก..." class="flex-1 bg-gray-50 border border-gray-200 rounded-xl p-2.5">
+                                    <button @click="addMember()" class="bg-blue-500 text-white px-4 rounded-xl font-bold hover:bg-blue-600">เพิ่ม</button>
+                                </div>
+                            </div>
+                            
+                            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                                <template x-for="m in members" :key="m.id">
+                                    <div class="flex items-center justify-between p-4 border-b border-gray-50 last:border-0 hover:bg-gray-50">
+                                        <div class="flex items-center gap-3">
+                                            <span class="text-2xl" x-text="m.avatar_emoji"></span>
+                                            <span class="font-bold text-gray-700" x-text="m.name"></span>
+                                        </div>
+                                        <button @click="deleteMember(m.id)" class="text-red-400 hover:text-red-600 text-sm font-bold">ลบ</button>
+                                    </div>
+                                </template>
+                            </div>
+                        </div>
+
+                        <!-- Categories -->
+                        <div>
+                            <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 mb-6">
+                                <h3 class="font-bold text-gray-700 mb-4 text-lg">เพิ่มหมวดหมู่งาน</h3>
+                                <div class="flex gap-2">
+                                    <input type="text" x-model="newCategory.icon_emoji" placeholder="อีโมจิ" class="w-16 bg-gray-50 border border-gray-200 rounded-xl p-2.5 text-center">
+                                    <input type="text" x-model="newCategory.name" placeholder="ชื่อหมวดหมู่..." class="flex-1 bg-gray-50 border border-gray-200 rounded-xl p-2.5">
+                                    <input type="color" x-model="newCategory.color_code" class="w-10 h-10 rounded-xl cursor-pointer mt-1">
+                                    <button @click="addCategory()" class="bg-purple-500 text-white px-4 rounded-xl font-bold hover:bg-purple-600">เพิ่ม</button>
+                                </div>
+                            </div>
+                            
+                            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                                <template x-for="c in categories" :key="c.id">
+                                    <div class="flex items-center justify-between p-4 border-b border-gray-50 last:border-0 hover:bg-gray-50">
+                                        <div class="flex items-center gap-3">
+                                            <span class="w-8 h-8 rounded-full flex items-center justify-center text-sm" :style="`background-color: ${c.color_code}`" x-text="c.icon_emoji"></span>
+                                            <span class="font-bold text-gray-700" x-text="c.name"></span>
+                                        </div>
+                                        <button @click="deleteCategory(c.id)" class="text-red-400 hover:text-red-600 text-sm font-bold">ลบ</button>
+                                    </div>
+                                </template>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- Mobile Bottom Nav -->
+        <div class="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 flex justify-around p-2 z-30 pb-safe">
+            <button @click="currentView = 'dashboard'" :class="currentView === 'dashboard' ? 'text-blue-500' : 'text-gray-400'" class="flex flex-col items-center p-2 rounded-xl transition-colors">
+                <span class="text-xl">📊</span><span class="text-[10px] font-bold mt-1">Dash</span>
+            </button>
+            <button @click="currentView = 'finance'" :class="currentView === 'finance' ? 'text-green-500' : 'text-gray-400'" class="flex flex-col items-center p-2 rounded-xl transition-colors">
+                <span class="text-xl">💰</span><span class="text-[10px] font-bold mt-1">Finance</span>
+            </button>
+            <button @click="currentView = 'tasks'" :class="currentView === 'tasks' ? 'text-pink-500' : 'text-gray-400'" class="flex flex-col items-center p-2 rounded-xl transition-colors">
+                <span class="text-xl">📋</span><span class="text-[10px] font-bold mt-1">Tasks</span>
+            </button>
+            <button @click="currentView = 'master'" :class="currentView === 'master' ? 'text-purple-500' : 'text-gray-400'" class="flex flex-col items-center p-2 rounded-xl transition-colors">
+                <span class="text-xl">⚙️</span><span class="text-[10px] font-bold mt-1">Master</span>
+            </button>
+        </div>
+
+    </div>
+    
+    <style>
+        .pb-safe { padding-bottom: env(safe-area-inset-bottom); }
+    </style>
+    
+    <script src="admin.js?v=6"></script>
+</body>
+</html>
