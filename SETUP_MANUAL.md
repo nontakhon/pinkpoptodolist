@@ -56,7 +56,21 @@ uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 - **หน้าผู้ดูแลระบบ:** เปิดเบราว์เซอร์ไปที่ `http://localhost:8000/admin.html`
 - **หน้า API Docs (Swagger):** เปิดเบราว์เซอร์ไปที่ `http://localhost:8000/docs`
 
-## ⚙️ 4. สถาปัตยกรรม (Architecture Notes)
-- **Database:** ใช้ SQLite ไฟล์ `tasks.db` จะถูกสร้างขึ้นอัตโนมัติในโฟลเดอร์โปรเจกต์เมื่อเริ่มรัน
-- **Real-time Sync:** ใช้เทคโนโลยี WebSocket ของ FastAPI ในการ Broadcast สถานะ `{"event": "refresh"}` ไปยังทุกเครื่องลูกข่าย เพื่อให้อัปเดต UI เบื้องหลังทันทีที่มีการเปลี่ยนแปลง
-- **Cron Jobs:** ใช้ `APScheduler` (BackgroundScheduler) ทำงานในแอปพลิเคชัน เพื่อเจนงานรายวันตาม Schedule/Habit ที่ตั้งค่าไว้แบบอัตโนมัติ
+## 📦 4. การอัปเดต Database (Patching Database)
+
+หากคุณทำการโคลนโค้ดเวอร์ชันล่าสุดที่มีการเพิ่มระบบจัดการนิสัย (Habit Master System) และใช้ฐานข้อมูลเดิม (ไม่ได้ลบ `thetask.db` ทิ้ง) คุณจำเป็นต้องรันสคริปต์เพื่อเพิ่มฟิลด์ที่จำเป็นเข้าสู่ Database:
+
+**เปิด Terminal และรันคำสั่งต่อไปนี้:**
+```bash
+sqlite3 data/thetask.db < patch_is_active.sql
+```
+*สคริปต์นี้จะทำการเพิ่มคอลัมน์ `is_active` ลงในตาราง `tasks` เพื่อไม่ให้เกิด Error ตอนระบบพยายามดึงข้อมูลสถิติครับ*
+
+## 🐳 5. การใช้งานผ่าน Docker (ทางเลือก)
+โปรเจกต์นี้รองรับ Docker และ Docker Compose:
+```bash
+docker-compose up -d --build
+```
+ระบบจะรันบน `http://localhost:8000` โดยอัตโนมัติ
+
+*(หมายเหตุ: หากต้องการดูรายละเอียดทางเทคนิคเชิงลึก กรุณาอ่านเพิ่มเติมใน `TECHNICAL_SPEC.md`)*
