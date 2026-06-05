@@ -398,13 +398,13 @@ def read_tasks(skip: int = 0, limit: int = 100, task_date: date = None, db: Sess
     if task_date:
         spawn_recurring_tasks(db, task_date)
         
-    query = db.query(models.Task).filter(models.Task.status != "Template")
+    query = db.query(models.Task).filter(models.Task.status != "Template").order_by(models.Task.id.desc())
     if task_date:
         query_pending = query.filter(models.Task.due_date <= task_date, models.Task.status == "Pending")
         query_done = db.query(models.Task).filter(
         models.Task.status.in_(["Completed", "Skipped"]),
         models.Task.due_date == task_date
-    )
+    ).order_by(models.Task.id.desc())
         return query_pending.all() + query_done.all()
     return query.offset(skip).limit(limit).all()
 
