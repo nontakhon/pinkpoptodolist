@@ -21,6 +21,10 @@ document.addEventListener('alpine:init', () => {
         showEditModal: false,
         editingTask: null,
 
+        // Habits
+        habitsList: [],
+        habitFilterMember: '',
+
         // Forms
         newTask: { 
             type: 'TASK', 
@@ -83,6 +87,7 @@ document.addEventListener('alpine:init', () => {
                 if (val === 'dashboard') this.loadDashboard();
                 if (val === 'finance') this.loadFinance();
                 if (val === 'tasks') this.loadAllTasks();
+                if (val === 'habits') this.loadHabits();
             });
             
             this.$watch('financeFilter', () => {
@@ -115,6 +120,19 @@ document.addEventListener('alpine:init', () => {
 
         async loadAllTasks() {
             this.tasks = await this.fetchApi('/tasks/?limit=2000') || [];
+        },
+
+        async loadHabits() {
+            const templates = await this.fetchApi('/templates/') || [];
+            this.habitsList = templates.filter(t => t.is_habit);
+        },
+
+        async toggleHabitActive(habit) {
+            habit.is_active = !habit.is_active;
+            await this.fetchApi(`/tasks/${habit.id}`, {
+                method: 'PUT',
+                body: JSON.stringify({ is_active: habit.is_active })
+            });
         },
 
         async loadDashboard() {

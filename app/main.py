@@ -67,12 +67,13 @@ def generate_recurring_tasks():
     db = SessionLocal()
     try:
         today = date.today()
-        templates = db.query(models.Task).filter(models.Task.status == "Template").all()
+        templates = db.query(models.Task).filter(models.Task.status == "Template", models.Task.is_active == True).all()
         for template in templates:
             if not template.cron_expression and not template.recurrence_interval_days:
                 continue
             
             match = False
+            today = date.today()
             now = datetime.combine(today, datetime.min.time())
             
             if template.cron_expression:
@@ -328,7 +329,7 @@ def create_task(task: schemas.TaskCreate, background_tasks: BackgroundTasks, db:
     return db_task
 
 def spawn_recurring_tasks(db: Session, target_date: date):
-    templates = db.query(models.Task).filter(models.Task.status == "Template").all()
+    templates = db.query(models.Task).filter(models.Task.status == "Template", models.Task.is_active == True).all()
     for tpl in templates:
         if tpl.recurrence_limit and tpl.recurrence_count >= tpl.recurrence_limit:
             tpl.status = "Completed_Template"
@@ -504,6 +505,7 @@ def update_task_full(task_id: int, payload: schemas.TaskUpdate, background_tasks
     if payload.note is not None: task.note = payload.note
     if payload.admin_note is not None: task.admin_note = payload.admin_note
     if payload.is_reviewed is not None: task.is_reviewed = payload.is_reviewed
+    if payload.is_active is not None: task.is_active = payload.is_active
     if payload.value_amount is not None: task.value_amount = payload.value_amount
     
     db.commit()

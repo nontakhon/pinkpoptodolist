@@ -12,8 +12,7 @@ document.addEventListener('alpine:init', () => {
         summary: {},
         financeFilter: { month: new Date().getMonth()+1, year: new Date().getFullYear(), member_id: '' },
         myDashboard: { weekly_stats: [] },
-        
-        
+        myHabits: [],
         
         currentMember: null,
         showLoginScreen: false,
@@ -388,6 +387,17 @@ document.addEventListener('alpine:init', () => {
         async loadMyDashboard() {
             if (!this.currentMember) return;
             this.myDashboard = await this.fetchApi(`/members/${this.currentMember.id}/dashboard`) || { weekly_stats: [] };
+            
+            const allTemplates = await this.fetchApi('/templates/') || [];
+            this.myHabits = allTemplates.filter(t => t.is_habit && t.assigned_member_id === this.currentMember.id);
+        },
+
+        async toggleMyHabit(habit) {
+            habit.is_active = !habit.is_active;
+            await this.fetchApi(`/tasks/${habit.id}`, {
+                method: 'PUT',
+                body: JSON.stringify({ is_active: habit.is_active })
+            });
         },
 
         

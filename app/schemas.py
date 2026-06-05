@@ -61,9 +61,10 @@ class TaskBase(BaseModel):
     note: Optional[str] = None
     admin_note: Optional[str] = None
     is_reviewed: Optional[bool] = False
-    has_penalty: bool = False
-    is_habit: bool = False
-    time_block: str = "ANYTIME"
+    has_penalty: Optional[bool] = False
+    is_habit: Optional[bool] = False
+    is_active: Optional[bool] = True
+    time_block: Optional[str] = "ANYTIME"
     value_amount: int = 0
     template_task_id: Optional[int] = None
     recurrence_interval_days: Optional[int] = None
@@ -85,6 +86,7 @@ class TaskUpdate(BaseModel):
     note: Optional[str] = None
     admin_note: Optional[str] = None
     is_reviewed: Optional[bool] = None
+    is_active: Optional[bool] = None
     value_amount: Optional[int] = None
 
 class TaskCreate(TaskBase):
