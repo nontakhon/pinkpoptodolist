@@ -99,7 +99,11 @@ document.addEventListener('alpine:init', () => {
             this.connectWebSocket();
         },
 
+        // Loading state
+        isLoading: false,
+
         async fetchApi(endpoint, options = {}) {
+            this.isLoading = true;
             if (options.body && !options.headers) {
                 options.headers = { 'Content-Type': 'application/json' };
             }
@@ -111,6 +115,8 @@ document.addEventListener('alpine:init', () => {
                 console.error('API Error:', err);
                 alert('เกิดข้อผิดพลาด: ' + err.message);
                 return null;
+            } finally {
+                this.isLoading = false;
             }
         },
 
