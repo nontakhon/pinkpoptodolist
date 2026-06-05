@@ -12,6 +12,24 @@
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
 </head>
 <body class="bg-[#FFDFD3] min-h-screen font-sans text-gray-800" x-data="appData()" x-init="init()">
+    <!-- Loading Overlay -->
+    <div x-show="isLoading" 
+         class="fixed inset-0 bg-black/40 backdrop-blur-sm z-[9999] flex flex-col items-center justify-center transition-all"
+         style="display: none;"
+         x-transition:enter="transition ease-out duration-200"
+         x-transition:enter-start="opacity-0"
+         x-transition:enter-end="opacity-100"
+         x-transition:leave="transition ease-in duration-150"
+         x-transition:leave-start="opacity-100"
+         x-transition:leave-end="opacity-0">
+        <div class="bg-white p-6 rounded-3xl shadow-2xl flex flex-col items-center gap-4 border border-gray-100">
+            <!-- Sleek Loading Spinner -->
+            <div class="relative w-12 h-12">
+                <div class="w-12 h-12 rounded-full border-4 border-pink-100 animate-spin border-t-pink-500"></div>
+            </div>
+            <div class="text-sm font-bold text-gray-700">กำลังประมวลผลข้อมูล...</div>
+        </div>
+    </div>
 
     <!-- Login Screen -->
     <div x-show="showLoginScreen" class="fixed inset-0 bg-[#FFDFD3] z-[100] flex flex-col items-center justify-center p-6" style="display: none;">

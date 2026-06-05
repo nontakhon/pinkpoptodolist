@@ -352,7 +352,11 @@ document.addEventListener('alpine:init', () => {
             await this.loadSummary();
         },
 
+        // Loading state
+        isLoading: false,
+
         async fetchApi(url, options = {}) {
+            this.isLoading = true;
             try {
                 const res = await fetch(url, {
                     headers: { 'Content-Type': 'application/json' },
@@ -361,6 +365,8 @@ document.addEventListener('alpine:init', () => {
                 return await res.json();
             } catch (err) {
                 console.error("API Error:", err);
+            } finally {
+                this.isLoading = false;
             }
         },
 
