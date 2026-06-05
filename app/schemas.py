@@ -59,6 +59,8 @@ class TaskBase(BaseModel):
     is_recurring: Optional[bool] = False
     cron_expression: Optional[str] = None
     note: Optional[str] = None
+    admin_note: Optional[str] = None
+    is_reviewed: Optional[bool] = False
     has_penalty: bool = False
     is_habit: bool = False
     time_block: str = "ANYTIME"
@@ -72,6 +74,16 @@ class TaskBase(BaseModel):
 
 class TaskNoteUpdate(BaseModel):
     note: str
+
+class TaskUpdate(BaseModel):
+    title: Optional[str] = None
+    category_id: Optional[int] = None
+    assigned_member_id: Optional[int] = None
+    status: Optional[str] = None
+    note: Optional[str] = None
+    admin_note: Optional[str] = None
+    is_reviewed: Optional[bool] = None
+    value_amount: Optional[int] = None
 
 class TaskCreate(TaskBase):
     pass

@@ -42,6 +42,8 @@ class Task(Base):
     is_recurring = Column(Boolean, default=False)
     cron_expression = Column(String, nullable=True)
     note = Column(String, nullable=True)
+    admin_note = Column(String, nullable=True)
+    is_reviewed = Column(Boolean, default=False)
     has_penalty = Column(Boolean, default=False)
     is_habit = Column(Boolean, default=False)
     time_block = Column(String, default="ANYTIME") # 'MORNING', 'AFTERNOON', 'EVENING', 'ANYTIME'

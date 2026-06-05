@@ -27,7 +27,7 @@ document.addEventListener('alpine:init', () => {
             time_block: 'ANYTIME',
             value_amount: 0,
             repeat_type: 'daily', weekly_days: [], monthly_date: 1, 
-            interval_days: 1, end_condition: 'count', recurrence_limit: 120
+            interval_days: 1, end_condition: 'count', recurrence_limit: 7
         },
         newMember: { name: '', avatar_emoji: '' },
         
@@ -502,7 +502,7 @@ document.addEventListener('alpine:init', () => {
                 title: '', category_id: '', assigned_member_id: '', assignment_type: 'MEMBER', 
                 has_penalty: false, time_block: 'ANYTIME', value_amount: 0,
                 repeat_type: 'daily', weekly_days: [], 
-                monthly_date: 1, interval_days: 1, end_condition: 'count', recurrence_limit: 120
+                monthly_date: 1, interval_days: 1, end_condition: 'count', recurrence_limit: 7
             };
             this.loadTasks();
             this.loadTemplates();

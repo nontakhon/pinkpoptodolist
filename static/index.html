@@ -8,7 +8,7 @@
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
-    <script src="app.js?v=20" defer></script>
+    <script src="app.js?v=21" defer></script>
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
 </head>
 <body class="bg-[#FFDFD3] min-h-screen font-sans text-gray-800" x-data="appData()" x-init="init()">
@@ -472,7 +472,7 @@
                             <span class="text-xl">⏰</span> <span class="font-bold text-orange-700 text-sm">การเกิดซ้ำ (Recurrence)</span>
                         </div>
                         <div x-show="newTask.type === 'HABIT'" class="text-[10px] text-orange-600 bg-orange-100 p-2 rounded-lg mb-2">
-                            💡 นิสัย (Habit) จะถูกตั้งค่าให้เกิดขึ้น "ทุกวัน" และจบหลังจาก "120 ครั้ง" เป็นค่าเริ่มต้น เพื่อการันตีการสร้างนิสัย หากต้องการเปลี่ยนสามารถแก้ด้านล่างได้
+                            💡 นิสัย (Habit) จะถูกตั้งค่าให้เกิดขึ้น "ทุกวัน" และจบหลังจาก "7 ครั้ง" เป็นค่าเริ่มต้น เพื่อการันตีการสร้างนิสัย หากต้องการเปลี่ยนสามารถแก้ด้านล่างได้
                         </div>
                         <div>
                             <label class="text-xs text-gray-500 font-semibold mb-1 block">รูปแบบการเกิดซ้ำ:</label>

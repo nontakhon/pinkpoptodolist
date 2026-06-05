@@ -6,17 +6,28 @@ document.addEventListener('alpine:init', () => {
         members: [],
         categories: [],
         tasks: [],
+        selectedTaskIds: [],
         
         // Analytics
         dashboardStats: null,
         
+        searchQuery: '',
+        filterYear: '',
+        filterMonth: '',
+        filterDay: '',
+        filterMemberId: '',
+        filterCategoryId: '',
+        
+        showEditModal: false,
+        editingTask: null,
+
         // Forms
         newTask: { 
             type: 'TASK', 
             title: '', category_id: '', assignment_type: 'ANYONE', assigned_member_id: '', 
             has_penalty: false, time_block: 'ANYTIME', value_amount: 0,
             repeat_type: 'daily', weekly_days: [], monthly_date: 1, 
-            interval_days: 1, end_condition: 'count', recurrence_limit: 120
+            interval_days: 1, end_condition: 'count', recurrence_limit: 7
         },
         newMember: { name: '', avatar_emoji: '' },
         newCategory: { name: '', icon_emoji: '', color_code: '#FFDFD3' },
@@ -103,8 +114,7 @@ document.addEventListener('alpine:init', () => {
         },
 
         async loadAllTasks() {
-            // Optimally, fetch all tasks or paginated
-            this.tasks = await this.fetchApi('/tasks/') || [];
+            this.tasks = await this.fetchApi('/tasks/?limit=2000') || [];
         },
 
         async loadDashboard() {
@@ -224,6 +234,15 @@ document.addEventListener('alpine:init', () => {
         async createTask() {
             if(!this.newTask.title) return;
             
+            if (this.newTask.assignment_type === 'MEMBER' && !this.newTask.assigned_member_id) {
+                if (this.members.length > 0) {
+                    this.newTask.assigned_member_id = this.members[0].id;
+                } else {
+                    alert('กรุณาระบุชื่อคนทำ');
+                    return;
+                }
+            }
+            
             let cron_expression = null;
             let recurrence_interval_days = null;
             
@@ -267,17 +286,109 @@ document.addEventListener('alpine:init', () => {
                 type: 'TASK', title: '', category_id: '', assignment_type: 'ANYONE', assigned_member_id: '', 
                 has_penalty: false, time_block: 'ANYTIME', value_amount: 0,
                 repeat_type: 'daily', weekly_days: [], monthly_date: 1, 
-                interval_days: 1, end_condition: 'count', recurrence_limit: 120
+                interval_days: 1, end_condition: 'count', recurrence_limit: 7
             };
             if(this.currentView === 'tasks') this.loadAllTasks();
+        },
+
+        openEditModal(task) {
+            this.editingTask = {
+                id: task.id,
+                title: task.title,
+                category_id: task.category_id || '',
+                assigned_member_id: task.assigned_member_id || '',
+                status: task.status,
+                value_amount: task.value_amount || 0,
+                note: task.note || '',
+                admin_note: task.admin_note || '',
+                is_reviewed: task.is_reviewed || false
+            };
+            this.showEditModal = true;
+        },
+
+        closeEditModal() {
+            this.showEditModal = false;
+            this.editingTask = null;
+        },
+
+        async saveEditTask() {
+            if (!this.editingTask) return;
+            const payload = {
+                title: this.editingTask.title,
+                category_id: this.editingTask.category_id ? parseInt(this.editingTask.category_id) : null,
+                assigned_member_id: this.editingTask.assigned_member_id ? parseInt(this.editingTask.assigned_member_id) : null,
+                status: this.editingTask.status,
+                value_amount: parseInt(this.editingTask.value_amount) || 0,
+                note: this.editingTask.note,
+                admin_note: this.editingTask.admin_note,
+                is_reviewed: this.editingTask.is_reviewed
+            };
+            
+            await this.fetchApi(`/tasks/${this.editingTask.id}`, {
+                method: 'PUT',
+                body: JSON.stringify(payload)
+            });
+            
+            this.closeEditModal();
+            this.loadAllTasks();
         },
 
         async deleteTask(id) {
             if(!confirm('ยืนยันลบงานนี้ถาวร?')) return;
             await this.fetchApi(`/tasks/${id}`, { method: 'DELETE' });
             this.tasks = this.tasks.filter(t => t.id !== id);
+            this.selectedTaskIds = this.selectedTaskIds.filter(tid => tid !== id);
+        },
+
+        async bulkDeleteTasks() {
+            if(this.selectedTaskIds.length === 0) return;
+            if(!confirm(`ยืนยันลบงานที่เลือกทั้ง ${this.selectedTaskIds.length} รายการถาวร?`)) return;
+            
+            // Delete sequentially or via Promise.all. Sequential is safer if many.
+            for (let id of this.selectedTaskIds) {
+                await this.fetchApi(`/tasks/${id}`, { method: 'DELETE' });
+            }
+            
+            // Filter them out
+            this.tasks = this.tasks.filter(t => !this.selectedTaskIds.includes(t.id));
+            this.selectedTaskIds = [];
+        },
+
+        toggleAllTasks(e) {
+            if (e.target.checked) {
+                // Select all currently filtered tasks (up to 100 on screen, or just the whole filtered array? Let's do the top 100 on screen)
+                this.selectedTaskIds = this.filteredTasks.slice(0, 100).map(t => t.id);
+            } else {
+                this.selectedTaskIds = [];
+            }
         },
         
+        get filteredTasks() {
+            return this.tasks.filter(t => {
+                let match = true;
+                if (this.searchQuery) {
+                    match = match && t.title.toLowerCase().includes(this.searchQuery.toLowerCase());
+                }
+                if (t.due_date) {
+                    const parts = t.due_date.split('-');
+                    if (this.filterYear) match = match && parts[0] === this.filterYear;
+                    if (this.filterMonth) match = match && parts[1] === this.filterMonth;
+                    if (this.filterDay) match = match && parts[2] === this.filterDay;
+                } else {
+                    if (this.filterYear || this.filterMonth || this.filterDay) match = false;
+                }
+                
+                if (this.filterMemberId) {
+                    match = match && (t.assigned_member_id == this.filterMemberId);
+                }
+                if (this.filterCategoryId) {
+                    match = match && (t.category_id == this.filterCategoryId);
+                }
+                
+                return match;
+            });
+        },
+
         getMember(id) {
             return this.members.find(m => m.id == id);
         },

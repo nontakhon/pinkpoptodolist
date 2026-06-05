@@ -97,7 +97,8 @@
                                 <label class="text-xs font-bold text-gray-500 block mb-1">สมาชิก</label>
                                 <select x-model="financeFilter.member_id" class="w-full bg-gray-50 border border-gray-200 rounded-xl p-2.5">
                                     <option value="">-- ทุกคน --</option>
-                                    <template x-for="m in members" :key="m.id">
+                                    <option value="" disabled>-- กรุณาเลือกคนทำ --</option>
+                                            <template x-for="m in members" :key="m.id">
                                         <option :value="m.id" x-text="m.name"></option>
                                     </template>
                                 </select>
@@ -217,7 +218,8 @@
                                         <option value="UNASSIGNED">❓ ยังว่างอยู่ (Unassigned)</option>
                                     </select>
                                     <select x-show="newTask.assignment_type === 'MEMBER'" x-model="newTask.assigned_member_id" class="w-full bg-pink-50 border-none rounded-xl p-2.5 shadow-sm focus:ring-2 focus:ring-pink-300 text-sm font-bold text-pink-700">
-                                        <template x-for="m in members" :key="m.id">
+                                        <option value="" disabled>-- กรุณาเลือกคนทำ --</option>
+                                            <template x-for="m in members" :key="m.id">
                                             <option :value="m.id" x-text="m.avatar_emoji + ' ' + m.name"></option>
                                         </template>
                                     </select>
@@ -286,38 +288,89 @@
                     </div>
 
                     <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                        <div class="p-4 border-b border-gray-100 bg-gray-50 flex flex-wrap gap-3 items-center">
+                            <input type="text" x-model="searchQuery" placeholder="🔍 ค้นหาชื่องาน..." class="flex-1 min-w-[200px] border border-gray-200 rounded-xl p-2 text-sm focus:ring-2 focus:ring-pink-300">
+                            <select x-model="filterCategoryId" class="border border-gray-200 rounded-xl p-2 text-sm text-gray-600 bg-white">
+                                <option value="">ทุกหมวดหมู่</option>
+                                <template x-for="c in categories" :key="c.id">
+                                    <option :value="c.id" x-text="c.icon_emoji + ' ' + c.name"></option>
+                                </template>
+                            </select>
+                            <select x-model="filterMemberId" class="border border-gray-200 rounded-xl p-2 text-sm text-gray-600 bg-white">
+                                <option value="">ทุกคน</option>
+                                <template x-for="m in members" :key="m.id">
+                                    <option :value="m.id" x-text="m.avatar_emoji + ' ' + m.name"></option>
+                                </template>
+                            </select>
+                            <select x-model="filterYear" class="border border-gray-200 rounded-xl p-2 text-sm text-gray-600 bg-white">
+                                <option value="">ทุกปี</option>
+                                <option value="2026">2026</option>
+                                <option value="2025">2025</option>
+                                <option value="2024">2024</option>
+                            </select>
+                            <select x-model="filterMonth" class="border border-gray-200 rounded-xl p-2 text-sm text-gray-600 bg-white">
+                                <option value="">ทุกเดือน</option>
+                                <template x-for="m in 12">
+                                    <option :value="m.toString().padStart(2, '0')" x-text="'เดือน ' + m"></option>
+                                </template>
+                            </select>
+                            <select x-model="filterDay" class="border border-gray-200 rounded-xl p-2 text-sm text-gray-600 bg-white">
+                                <option value="">ทุกวัน</option>
+                                <template x-for="d in 31">
+                                    <option :value="d.toString().padStart(2, '0')" x-text="'วันที่ ' + d"></option>
+                                </template>
+                            </select>
+                            <button x-show="selectedTaskIds.length > 0" @click="bulkDeleteTasks()" style="display: none;" class="bg-red-500 text-white px-3 py-2 rounded-xl text-sm font-bold shadow-sm hover:bg-red-600 transition ml-auto flex items-center gap-2">
+                                🗑️ ลบที่เลือก (<span x-text="selectedTaskIds.length"></span>)
+                            </button>
+                        </div>
                         <table class="w-full text-left text-sm">
                             <thead class="bg-gray-50 text-gray-500">
                                 <tr>
+                                    <th class="p-4 w-10">
+                                        <input type="checkbox" @change="toggleAllTasks" :checked="selectedTaskIds.length > 0 && selectedTaskIds.length === Math.min(filteredTasks.length, 100)" class="w-4 h-4 rounded border-gray-300 text-pink-500 focus:ring-pink-500 cursor-pointer">
+                                    </th>
                                     <th class="p-4 font-semibold">ID</th>
                                     <th class="p-4 font-semibold">ชื่องาน</th>
+                                    <th class="p-4 font-semibold">คนทำ</th>
                                     <th class="p-4 font-semibold">สถานะ</th>
                                     <th class="p-4 font-semibold">วันที่</th>
                                     <th class="p-4 font-semibold text-right">จัดการ</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                <template x-for="task in tasks.slice(0, 50)" :key="task.id">
+                                <template x-for="task in filteredTasks.slice(0, 100)" :key="task.id">
                                     <tr class="border-t border-gray-50 hover:bg-gray-50">
+                                        <td class="p-4">
+                                            <input type="checkbox" :value="task.id" x-model="selectedTaskIds" class="w-4 h-4 rounded border-gray-300 text-pink-500 focus:ring-pink-500 cursor-pointer">
+                                        </td>
                                         <td class="p-4 text-xs text-gray-400" x-text="'#'+task.id"></td>
                                         <td class="p-4 font-medium text-gray-800">
                                             <span x-text="task.title"></span>
                                             <span x-show="task.category_id" class="ml-2 text-xs text-gray-400" x-text="getCategory(task.category_id)?.icon_emoji"></span>
                                         </td>
+                                        <td class="p-4 text-xs">
+                                            <span x-show="task.assigned_member_id" class="bg-blue-50 text-blue-600 px-2 py-1 rounded-lg font-bold" x-text="getMember(task.assigned_member_id)?.name || 'Unknown'"></span>
+                                            <span x-show="!task.assigned_member_id" class="bg-gray-100 text-gray-500 px-2 py-1 rounded-lg font-bold">❓ ใครก็ได้</span>
+                                        </td>
                                         <td class="p-4">
-                                            <span class="px-2 py-1 rounded text-xs font-bold"
-                                                  :class="task.status === 'Completed' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'"
-                                                  x-text="task.status"></span>
+                                            <div class="flex items-center gap-2">
+                                                <span class="px-2 py-1 rounded text-xs font-bold"
+                                                      :class="task.status === 'Completed' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'"
+                                                      x-text="task.status"></span>
+                                                <span x-show="task.is_reviewed" class="text-xs" title="ตรวจทานแล้ว">✅</span>
+                                            </div>
                                         </td>
                                         <td class="p-4 text-gray-500" x-text="task.due_date || 'Template'"></td>
                                         <td class="p-4 text-right">
+                                            <button @click="openEditModal(task)" class="text-blue-400 hover:text-blue-600 p-2 rounded-lg hover:bg-blue-50 mr-1">✏️</button>
                                             <button @click="deleteTask(task.id)" class="text-red-400 hover:text-red-600 p-2 rounded-lg hover:bg-red-50">🗑️</button>
                                         </td>
                                     </tr>
                                 </template>
                             </tbody>
                         </table>
-                        <div class="p-4 text-center text-xs text-gray-400 bg-gray-50">แสดงข้อมูลล่าสุด 50 รายการ</div>
+                        <div class="p-4 text-center text-xs text-gray-400 bg-gray-50">แสดงผลการค้นหาสูงสุด 100 รายการ (ดึงข้อมูลล่าสุดมา 2,000 รายการ)</div>
                     </div>
                 </div>
 
@@ -398,12 +451,86 @@
             </button>
         </div>
 
+        <!-- Edit Task Modal -->
+        <div x-show="showEditModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" style="display: none;">
+            <div @click.away="closeEditModal()" class="bg-white rounded-3xl p-6 w-full max-w-md shadow-2xl overflow-y-auto max-h-[90vh]">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-xl font-black text-gray-800">✏️ แก้ไขงาน</h2>
+                    <button @click="closeEditModal()" class="text-gray-400 hover:text-gray-600">✕</button>
+                </div>
+                
+                <template x-if="editingTask">
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-xs font-bold text-gray-500 mb-1">ชื่องาน</label>
+                            <input type="text" x-model="editingTask.title" class="w-full bg-gray-50 border border-gray-200 rounded-xl p-2.5 text-sm">
+                        </div>
+                        
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-xs font-bold text-gray-500 mb-1">หมวดหมู่</label>
+                                <select x-model="editingTask.category_id" class="w-full bg-gray-50 border border-gray-200 rounded-xl p-2.5 text-sm">
+                                    <option value="">(ไม่มี)</option>
+                                    <template x-for="c in categories" :key="c.id">
+                                        <option :value="c.id" x-text="c.icon_emoji + ' ' + c.name"></option>
+                                    </template>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-gray-500 mb-1">คนทำ</label>
+                                <select x-model="editingTask.assigned_member_id" class="w-full bg-gray-50 border border-gray-200 rounded-xl p-2.5 text-sm">
+                                    <option value="">❓ ว่าง (Unassigned)</option>
+                                    <template x-for="m in members" :key="m.id">
+                                        <option :value="m.id" x-text="m.avatar_emoji + ' ' + m.name"></option>
+                                    </template>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-xs font-bold text-gray-500 mb-1">สถานะงาน</label>
+                                <select x-model="editingTask.status" class="w-full bg-gray-50 border border-gray-200 rounded-xl p-2.5 text-sm">
+                                    <option value="Pending">Pending</option>
+                                    <option value="Completed">Completed</option>
+                                    <option value="Skipped">Skipped</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-gray-500 mb-1">มูลค่า/เงิน</label>
+                                <input type="number" x-model="editingTask.value_amount" class="w-full bg-green-50 border border-green-200 text-green-700 font-bold rounded-xl p-2.5 text-sm">
+                            </div>
+                        </div>
+                        
+                        <div class="flex items-center gap-2 mt-2 bg-yellow-50 p-3 rounded-xl border border-yellow-100">
+                            <input type="checkbox" id="isReviewedCheckbox" x-model="editingTask.is_reviewed" class="w-5 h-5 rounded border-gray-300 text-yellow-500 focus:ring-yellow-500 cursor-pointer">
+                            <label for="isReviewedCheckbox" class="font-bold text-yellow-700 text-sm cursor-pointer">✅ ตรวจทานแล้ว (Admin Reviewed)</label>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-xs font-bold text-gray-500 mb-1">โน้ตทั่วไป</label>
+                            <textarea x-model="editingTask.note" class="w-full bg-gray-50 border border-gray-200 rounded-xl p-2.5 text-sm" rows="2"></textarea>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-xs font-bold text-purple-500 mb-1">🔒 Admin Note (บันทึกลับ)</label>
+                            <textarea x-model="editingTask.admin_note" class="w-full bg-purple-50 border border-purple-200 rounded-xl p-2.5 text-sm" rows="2"></textarea>
+                        </div>
+                        
+                        <button @click="saveEditTask()" class="w-full bg-blue-500 text-white font-black py-3 rounded-xl shadow-lg hover:bg-blue-600 transition mt-4">
+                            💾 บันทึกการแก้ไข
+                        </button>
+                    </div>
+                </template>
+            </div>
+        </div>
+
     </div>
     
     <style>
         .pb-safe { padding-bottom: env(safe-area-inset-bottom); }
     </style>
     
-    <script src="admin.js?v=6"></script>
+    <script src="admin.js?v=12"></script>
 </body>
 </html>

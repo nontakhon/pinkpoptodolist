@@ -97,6 +97,7 @@ def generate_recurring_tasks():
                         "description": template.description,
                         "status": "Pending",
                         "assigned_member_id": template.assigned_member_id,
+                        "assignment_type": template.assignment_type,
                         "created_by_member_id": template.created_by_member_id,
                         "task_type": "AUTO",
                         "due_date": today,
@@ -115,6 +116,7 @@ def generate_recurring_tasks():
                             if rule.rule_type == "RANDOM":
                                 chosen = random.choice(members)
                                 new_task_data["assigned_member_id"] = chosen.id
+                                new_task_data["assignment_type"] = "MEMBER"
                                 send_notification(f"Recurring Task '{template.title}' assigned to {chosen.name} via RANDOM.")
                             elif rule.rule_type == "ROUND_ROBIN":
                                 last_id = rule.last_assigned_member_id
@@ -129,6 +131,7 @@ def generate_recurring_tasks():
                                     except ValueError:
                                         chosen = members[0]
                                 new_task_data["assigned_member_id"] = chosen.id
+                                new_task_data["assignment_type"] = "MEMBER"
                                 rule.last_assigned_member_id = chosen.id
                                 db.commit()
                                 if 'background_tasks' in locals():
@@ -294,6 +297,7 @@ def create_task(task: schemas.TaskCreate, background_tasks: BackgroundTasks, db:
                 if rule.rule_type == "RANDOM":
                     chosen = random.choice(members)
                     task_data["assigned_member_id"] = chosen.id
+                    task_data["assignment_type"] = "MEMBER"
                     send_notification(f"Task '{task_data['title']}' assigned to {chosen.name} via RANDOM.")
                 elif rule.rule_type == "ROUND_ROBIN":
                     last_id = rule.last_assigned_member_id
@@ -308,6 +312,7 @@ def create_task(task: schemas.TaskCreate, background_tasks: BackgroundTasks, db:
                         except ValueError:
                             chosen = members[0]
                     task_data["assigned_member_id"] = chosen.id
+                    task_data["assignment_type"] = "MEMBER"
                     rule.last_assigned_member_id = chosen.id
                     db.commit()
                     if 'background_tasks' in locals():
@@ -369,6 +374,7 @@ def spawn_recurring_tasks(db: Session, target_date: date):
                 description=tpl.description,
                 status="Pending",
                 assigned_member_id=tpl.assigned_member_id,
+                assignment_type=tpl.assignment_type,
                 created_by_member_id=tpl.created_by_member_id,
                 task_type="AUTO",
                 due_date=target_date,
@@ -415,7 +421,9 @@ def complete_task(task_id: int, background_tasks: BackgroundTasks, payload: Acti
     
     action = {"action": "COMPLETED", "timestamp": datetime.now().isoformat()}
     if payload:
-        if payload.member_id: action["member_id"] = payload.member_id
+        if payload.member_id: 
+            action["member_id"] = payload.member_id
+            task.assigned_member_id = payload.member_id # Re-assign to whoever ticked it
         if payload.note: action["note"] = payload.note
         if payload.image_url: action["image_url"] = payload.image_url
         if payload.note: task.note = payload.note
@@ -439,7 +447,9 @@ def skip_task(task_id: int, background_tasks: BackgroundTasks, payload: ActionPa
     
     action = {"action": "SKIPPED", "timestamp": datetime.now().isoformat()}
     if payload:
-        if payload.member_id: action["member_id"] = payload.member_id
+        if payload.member_id: 
+            action["member_id"] = payload.member_id
+            task.assigned_member_id = payload.member_id # Re-assign to whoever ticked it
         if payload.note: action["note"] = payload.note
         if payload.image_url: action["image_url"] = payload.image_url
         if payload.note: task.note = payload.note
@@ -471,6 +481,29 @@ def update_task_note(task_id: int, payload: schemas.TaskNoteUpdate, background_t
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
     task.note = payload.note
+    db.commit()
+    if 'background_tasks' in locals():
+        background_tasks.add_task(manager.broadcast, '{"event": "refresh"}')
+    db.refresh(task)
+    return task
+
+@app.put("/tasks/{task_id}", response_model=schemas.Task)
+def update_task_full(task_id: int, payload: schemas.TaskUpdate, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
+    task = db.query(models.Task).filter(models.Task.id == task_id).first()
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found")
+    
+    if payload.title is not None: task.title = payload.title
+    if payload.category_id is not None: task.category_id = payload.category_id
+    if payload.assigned_member_id is not None:
+        task.assigned_member_id = payload.assigned_member_id
+        task.assignment_type = "MEMBER" if payload.assigned_member_id else "UNASSIGNED"
+    if payload.status is not None: task.status = payload.status
+    if payload.note is not None: task.note = payload.note
+    if payload.admin_note is not None: task.admin_note = payload.admin_note
+    if payload.is_reviewed is not None: task.is_reviewed = payload.is_reviewed
+    if payload.value_amount is not None: task.value_amount = payload.value_amount
+    
     db.commit()
     if 'background_tasks' in locals():
         background_tasks.add_task(manager.broadcast, '{"event": "refresh"}')

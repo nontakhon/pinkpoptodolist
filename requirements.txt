@@ -4,3 +4,4 @@ sqlalchemy
 pydantic
 apscheduler
 croniter
+websockets==16.0
