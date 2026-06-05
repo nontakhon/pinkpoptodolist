@@ -33,7 +33,7 @@
         </div>
     </div>
 
-    <main class="max-w-md mx-auto h-screen flex flex-col bg-[#F9F9F9] shadow-2xl relative overflow-hidden sm:rounded-3xl sm:h-[95vh] sm:mt-[2.5vh]">
+    <main class="max-w-md mx-auto h-[100dvh] flex flex-col bg-[#F9F9F9] shadow-2xl relative overflow-hidden sm:rounded-3xl sm:h-[95vh] sm:mt-[2.5vh]">
         <!-- App Header -->
         <header class="bg-white shadow-sm px-4 py-2 sticky top-0 z-50 flex justify-between items-center">
             <h1 class="text-xl font-black text-pink-500 flex items-center gap-2 tracking-tight">
@@ -355,7 +355,7 @@
         
     
         <!-- Bottom Navigation Bar -->
-        <nav class="flex justify-around items-center bg-white py-2 px-4 border-t border-gray-100 z-50 rounded-t-3xl sm:rounded-3xl mt-auto shadow-[0_-4px_15px_-5px_rgba(0,0,0,0.05)]">
+        <nav class="flex-shrink-0 flex justify-around items-center bg-white pt-2 px-4 border-t border-gray-100 z-50 rounded-t-3xl sm:rounded-3xl mt-auto shadow-[0_-4px_15px_-5px_rgba(0,0,0,0.05)]" style="padding-bottom: max(0.5rem, env(safe-area-inset-bottom));">
             <button @click="currentView = 'board'" :class="currentView === 'board' ? 'text-pink-500 bg-pink-50' : 'text-gray-400 hover:text-gray-600'" class="flex flex-col items-center py-1 px-4 rounded-2xl transition-all">
                 <span class="text-lg mb-0.5">📋</span>
                 <span class="text-[10px] font-bold">บอร์ดงาน</span>
