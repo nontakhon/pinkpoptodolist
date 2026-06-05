@@ -623,6 +623,8 @@ def read_member_dashboard(member_id: int, db: Session = Depends(get_db)):
                 
     habit_titles_query = db.query(models.Task.title).filter(
         models.Task.is_habit == True,
+        models.Task.status == "Template",
+        models.Task.is_active == True,
         models.Task.assigned_member_id == member_id
     ).distinct().all()
     
