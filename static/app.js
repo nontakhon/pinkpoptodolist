@@ -13,6 +13,7 @@ document.addEventListener('alpine:init', () => {
         financeFilter: { month: new Date().getMonth()+1, year: new Date().getFullYear(), member_id: '' },
         myDashboard: { weekly_stats: [] },
         myHabits: [],
+        myHabitsFilter: 'ALL',
         
         currentMember: null,
         showLoginScreen: false,

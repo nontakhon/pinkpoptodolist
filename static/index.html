@@ -344,9 +344,16 @@
                     </div>
 
                     <!-- My Habits Manager -->
-                    <h3 class="font-bold text-gray-700 mb-3 ml-2">🌟 จัดการนิสัยของฉัน (My Habits)</h3>
+                    <div class="flex justify-between items-center mb-3">
+                        <h3 class="font-bold text-gray-700 ml-2">🌟 จัดการนิสัย (My Habits)</h3>
+                        <select x-model="myHabitsFilter" class="bg-gray-50 border border-gray-200 rounded-lg px-2 py-1 text-xs text-gray-600 font-bold">
+                            <option value="ALL">ทั้งหมด</option>
+                            <option value="ACTIVE">กำลังทำ (เปิด)</option>
+                            <option value="INACTIVE">พักไว้ (ปิด)</option>
+                        </select>
+                    </div>
                     <div class="space-y-3 mb-8">
-                        <template x-for="habit in myHabits" :key="habit.id">
+                        <template x-for="habit in myHabits.filter(h => myHabitsFilter === 'ALL' || (myHabitsFilter === 'ACTIVE' && h.is_active) || (myHabitsFilter === 'INACTIVE' && !h.is_active))" :key="habit.id">
                             <div class="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 flex justify-between items-center">
                                 <div>
                                     <div class="font-bold text-gray-700 text-sm" x-text="habit.title"></div>
@@ -359,8 +366,8 @@
                                 </label>
                             </div>
                         </template>
-                        <div x-show="myHabits.length === 0" class="text-xs text-gray-400 text-center py-4 bg-gray-50 rounded-2xl border border-gray-100">
-                            คุณยังไม่มีนิสัยส่วนตัวเลย ลองกดสร้างนิสัยใหม่ดูสิ!
+                        <div x-show="myHabits.filter(h => myHabitsFilter === 'ALL' || (myHabitsFilter === 'ACTIVE' && h.is_active) || (myHabitsFilter === 'INACTIVE' && !h.is_active)).length === 0" class="text-xs text-gray-400 text-center py-4 bg-gray-50 rounded-2xl border border-gray-100">
+                            ไม่มีนิสัยในหมวดหมู่นี้
                         </div>
                     </div>
 

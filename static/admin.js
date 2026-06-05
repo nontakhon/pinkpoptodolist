@@ -24,6 +24,7 @@ document.addEventListener('alpine:init', () => {
         // Habits
         habitsList: [],
         habitFilterMember: '',
+        habitFilterStatus: 'ALL',
 
         // Forms
         newTask: { 
