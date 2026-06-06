@@ -323,18 +323,93 @@ def create_task(task: schemas.TaskCreate, background_tasks: BackgroundTasks, db:
     db_task = models.Task(**task_data)
     db.add(db_task)
     db.commit()
-    if 'background_tasks' in locals():
+    
+    if db_task.status == "Template":
+        bulk_spawn_template(db, db_task)
+        
+    if background_tasks:
         background_tasks.add_task(manager.broadcast, '{"event": "refresh"}')
     db.refresh(db_task)
     return db_task
 
-def spawn_recurring_tasks(db: Session, target_date: date):
+def bulk_spawn_template(db: Session, tpl: models.Task, max_horizon: int = 365):
+    target_date = date.today()
+    limit = tpl.recurrence_limit or 30  # Default horizon for 'forever' is 30 days to prevent excessive generation
+    if tpl.recurrence_limit:
+        limit = min(tpl.recurrence_limit, max_horizon)
+        
+    generated = 0
+    checked_days = 0
+    max_days_to_check = 1000 # Safety timeout
+    
+    while generated < limit and checked_days < max_days_to_check:
+        should_generate = False
+        if tpl.cron_expression:
+            parts = tpl.cron_expression.split(" ")
+            if len(parts) == 5:
+                day_of_month = parts[2]
+                day_of_week = parts[4]
+                if day_of_month != '*':
+                    if target_date.day == int(day_of_month): should_generate = True
+                elif day_of_week != '*':
+                    target_dow = (target_date.weekday() + 1) % 7 # 0=Sun, 1=Mon...
+                    allowed_dows = [int(d) for d in day_of_week.split(',')]
+                    if target_dow in allowed_dows: should_generate = True
+                else:
+                    should_generate = True
+        elif tpl.recurrence_interval_days:
+            if not tpl.last_generated_date:
+                should_generate = True
+            else:
+                days_diff = (target_date - tpl.last_generated_date).days
+                if days_diff >= 0 and days_diff % tpl.recurrence_interval_days == 0:
+                    should_generate = True
+        else:
+            should_generate = True
+            
+        if should_generate:
+            existing = db.query(models.Task).filter(
+                models.Task.template_task_id == tpl.id,
+                models.Task.due_date == target_date
+            ).first()
+            
+            if not existing:
+                new_task = models.Task(
+                    category_id=tpl.category_id,
+                    title=tpl.title,
+                    description=tpl.description,
+                    status="Pending",
+                    assigned_member_id=tpl.assigned_member_id,
+                    assignment_type=tpl.assignment_type,
+                    created_by_member_id=tpl.created_by_member_id,
+                    task_type="AUTO",
+                    due_date=target_date,
+                    note=tpl.note,
+                    has_penalty=tpl.has_penalty,
+                    is_habit=tpl.is_habit,
+                    time_block=tpl.time_block,
+                    value_amount=tpl.value_amount,
+                    template_task_id=tpl.id
+                )
+                db.add(new_task)
+                generated += 1
+                tpl.recurrence_count += 1
+                tpl.last_generated_date = target_date
+                
+        target_date += timedelta(days=1)
+        checked_days += 1
+        
+    if tpl.recurrence_limit and tpl.recurrence_count >= tpl.recurrence_limit:
+        tpl.status = "Completed_Template"
+    db.commit()
+
+def spawn_recurring_tasks(db: Session, target_date: date, background_tasks: BackgroundTasks = None):
     templates = db.query(models.Task).filter(models.Task.status == "Template", models.Task.is_active == True).all()
     for tpl in templates:
         if tpl.recurrence_limit and tpl.recurrence_count >= tpl.recurrence_limit:
             tpl.status = "Completed_Template"
             db.commit()
-            if 'background_tasks' in locals():
+            if background_tasks:
                 background_tasks.add_task(manager.broadcast, '{"event": "refresh"}')
             continue
             
@@ -391,13 +466,13 @@ def spawn_recurring_tasks(db: Session, target_date: date):
             if not tpl.last_generated_date or target_date > tpl.last_generated_date:
                 tpl.last_generated_date = target_date
             db.commit()
-            if 'background_tasks' in locals():
+            if background_tasks:
                 background_tasks.add_task(manager.broadcast, '{"event": "refresh"}')
 
 @app.get("/tasks/", response_model=List[schemas.Task])
-def read_tasks(skip: int = 0, limit: int = 100, task_date: date = None, db: Session = Depends(get_db)):
+def read_tasks(background_tasks: BackgroundTasks, skip: int = 0, limit: int = 100, task_date: date = None, db: Session = Depends(get_db)):
     if task_date:
-        spawn_recurring_tasks(db, task_date)
+        spawn_recurring_tasks(db, task_date, background_tasks)
         
     query = db.query(models.Task).filter(models.Task.status != "Template").order_by(models.Task.id.desc())
     if task_date:

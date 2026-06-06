@@ -356,7 +356,7 @@ document.addEventListener('alpine:init', () => {
         isLoading: false,
 
         async fetchApi(url, options = {}) {
-            this.isLoading = true;
+            if (!options.hideLoading) this.isLoading = true;
             try {
                 const res = await fetch(url, {
                     headers: { 'Content-Type': 'application/json' },
@@ -366,7 +366,7 @@ document.addEventListener('alpine:init', () => {
             } catch (err) {
                 console.error("API Error:", err);
             } finally {
-                this.isLoading = false;
+                if (!options.hideLoading) this.isLoading = false;
             }
         },
 
@@ -472,58 +472,66 @@ document.addEventListener('alpine:init', () => {
 
         async createTask() {
             if (!this.newTask.title) return;
-            
-            let cron_expression = null;
-            let recurrence_interval_days = null;
-            
-            const is_recurring = (this.newTask.type === 'SCHEDULE' || this.newTask.type === 'HABIT');
-            const is_habit = (this.newTask.type === 'HABIT');
+            this.isLoading = true;
+            try {
+                let cron_expression = null;
+                let recurrence_interval_days = null;
+                
+                const is_recurring = (this.newTask.type === 'SCHEDULE' || this.newTask.type === 'HABIT');
+                const is_habit = (this.newTask.type === 'HABIT');
 
-            if (is_recurring) {
-                if (this.newTask.repeat_type === 'daily') {
-                    recurrence_interval_days = this.newTask.interval_days;
-                } else if (this.newTask.repeat_type === 'weekly') {
-                    const days = this.newTask.weekly_days.join(',');
-                    if (days) cron_expression = `0 0 * * ${days}`;
-                    else recurrence_interval_days = 7;
-                } else if (this.newTask.repeat_type === 'monthly') {
-                    cron_expression = `0 0 ${this.newTask.monthly_date} * *`;
+                if (is_recurring) {
+                    if (this.newTask.repeat_type === 'daily') {
+                        recurrence_interval_days = this.newTask.interval_days;
+                    } else if (this.newTask.repeat_type === 'weekly') {
+                        const days = this.newTask.weekly_days.join(',');
+                        if (days) cron_expression = `0 0 * * ${days}`;
+                        else recurrence_interval_days = 7;
+                    } else if (this.newTask.repeat_type === 'monthly') {
+                        cron_expression = `0 0 ${this.newTask.monthly_date} * *`;
+                    }
                 }
+
+                let recurrence_limit = this.newTask.end_condition === 'count' ? parseInt(this.newTask.recurrence_limit) : null;
+                if (recurrence_limit !== null && recurrence_limit > 30) {
+                    recurrence_limit = 30;
+                }
+
+                const payload = {
+                    title: this.newTask.title,
+                    category_id: this.newTask.category_id || null,
+                    assigned_member_id: this.newTask.assignment_type === 'MEMBER' ? (this.newTask.assigned_member_id || (this.currentMember ? this.currentMember.id : null)) : null,
+                    assignment_type: this.newTask.assignment_type,
+                    due_date: this.selectedDate,
+                    task_type: 'MANUAL',
+                    is_recurring: is_recurring,
+                    has_penalty: this.newTask.has_penalty,
+                    is_habit: is_habit,
+                    time_block: this.newTask.time_block,
+                    value_amount: parseInt(this.newTask.value_amount) || 0,
+                    cron_expression: cron_expression,
+                    recurrence_interval_days: recurrence_interval_days,
+                    recurrence_limit: recurrence_limit
+                };
+                await this.fetchApi('/tasks/', {
+                    method: 'POST',
+                    body: JSON.stringify(payload),
+                    hideLoading: true
+                });
+                this.showAddTask = false;
+                this.newTask = { 
+                    type: 'TASK',
+                    title: '', category_id: '', assigned_member_id: '', assignment_type: 'MEMBER', 
+                    has_penalty: false, time_block: 'ANYTIME', value_amount: 0,
+                    repeat_type: 'daily', weekly_days: [], 
+                    monthly_date: 1, interval_days: 1, end_condition: 'count', recurrence_limit: 7
+                };
+                await this.loadTasks();
+                await this.loadTemplates();
+                await this.loadSummary();
+            } finally {
+                this.isLoading = false;
             }
-
-            const recurrence_limit = this.newTask.end_condition === 'count' ? parseInt(this.newTask.recurrence_limit) : null;
-
-            const payload = {
-                title: this.newTask.title,
-                category_id: this.newTask.category_id || null,
-                assigned_member_id: this.newTask.assignment_type === 'MEMBER' ? (this.newTask.assigned_member_id || (this.currentMember ? this.currentMember.id : null)) : null,
-                assignment_type: this.newTask.assignment_type,
-                due_date: this.selectedDate,
-                task_type: 'MANUAL',
-                is_recurring: is_recurring,
-                has_penalty: this.newTask.has_penalty,
-                is_habit: is_habit,
-                time_block: this.newTask.time_block,
-                value_amount: parseInt(this.newTask.value_amount) || 0,
-                cron_expression: cron_expression,
-                recurrence_interval_days: recurrence_interval_days,
-                recurrence_limit: recurrence_limit
-            };
-            await this.fetchApi('/tasks/', {
-                method: 'POST',
-                body: JSON.stringify(payload)
-            });
-            this.showAddTask = false;
-            this.newTask = { 
-                type: 'TASK',
-                title: '', category_id: '', assigned_member_id: '', assignment_type: 'MEMBER', 
-                has_penalty: false, time_block: 'ANYTIME', value_amount: 0,
-                repeat_type: 'daily', weekly_days: [], 
-                monthly_date: 1, interval_days: 1, end_condition: 'count', recurrence_limit: 7
-            };
-            this.loadTasks();
-            this.loadTemplates();
-            this.loadSummary();
         },
 
         async addMember() {

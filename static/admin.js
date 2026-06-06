@@ -103,7 +103,7 @@ document.addEventListener('alpine:init', () => {
         isLoading: false,
 
         async fetchApi(endpoint, options = {}) {
-            this.isLoading = true;
+            if (!options.hideLoading) this.isLoading = true;
             if (options.body && !options.headers) {
                 options.headers = { 'Content-Type': 'application/json' };
             }
@@ -116,7 +116,7 @@ document.addEventListener('alpine:init', () => {
                 alert('เกิดข้อผิดพลาด: ' + err.message);
                 return null;
             } finally {
-                this.isLoading = false;
+                if (!options.hideLoading) this.isLoading = false;
             }
         },
 
@@ -258,62 +258,66 @@ document.addEventListener('alpine:init', () => {
 
         async createTask() {
             if(!this.newTask.title) return;
-            
-            if (this.newTask.assignment_type === 'MEMBER' && !this.newTask.assigned_member_id) {
-                if (this.members.length > 0) {
-                    this.newTask.assigned_member_id = this.members[0].id;
-                } else {
-                    alert('กรุณาระบุชื่อคนทำ');
-                    return;
+            this.isLoading = true;
+            try {
+                if (this.newTask.assignment_type === 'MEMBER' && !this.newTask.assigned_member_id) {
+                    if (this.members.length > 0) {
+                        this.newTask.assigned_member_id = this.members[0].id;
+                    } else {
+                        alert('กรุณาระบุชื่อคนทำ');
+                        return;
+                    }
                 }
-            }
-            
-            let cron_expression = null;
-            let recurrence_interval_days = null;
-            
-            const is_recurring = (this.newTask.type === 'SCHEDULE' || this.newTask.type === 'HABIT');
-            const is_habit = (this.newTask.type === 'HABIT');
+                
+                let cron_expression = null;
+                let recurrence_interval_days = null;
+                
+                const is_recurring = (this.newTask.type === 'SCHEDULE' || this.newTask.type === 'HABIT');
+                const is_habit = (this.newTask.type === 'HABIT');
 
-            if (is_recurring) {
-                if (this.newTask.repeat_type === 'daily') {
-                    recurrence_interval_days = this.newTask.interval_days;
-                } else if (this.newTask.repeat_type === 'weekly') {
-                    const days = this.newTask.weekly_days.join(',');
-                    if (days) cron_expression = `0 0 * * ${days}`;
-                    else recurrence_interval_days = 7;
-                } else if (this.newTask.repeat_type === 'monthly') {
-                    cron_expression = `0 0 ${this.newTask.monthly_date} * *`;
+                if (is_recurring) {
+                    if (this.newTask.repeat_type === 'daily') {
+                        recurrence_interval_days = this.newTask.interval_days;
+                    } else if (this.newTask.repeat_type === 'weekly') {
+                        const days = this.newTask.weekly_days.join(',');
+                        if (days) cron_expression = `0 0 * * ${days}`;
+                        else recurrence_interval_days = 7;
+                    } else if (this.newTask.repeat_type === 'monthly') {
+                        cron_expression = `0 0 ${this.newTask.monthly_date} * *`;
+                    }
                 }
+
+                const recurrence_limit = this.newTask.end_condition === 'count' ? parseInt(this.newTask.recurrence_limit) : null;
+
+                const payload = {
+                    title: this.newTask.title,
+                    category_id: this.newTask.category_id || null,
+                    assignment_type: this.newTask.assignment_type,
+                    assigned_member_id: this.newTask.assignment_type === 'MEMBER' ? (this.newTask.assigned_member_id || null) : null,
+                    due_date: new Date().toISOString().split('T')[0],
+                    task_type: 'MANUAL',
+                    is_recurring: is_recurring,
+                    has_penalty: this.newTask.has_penalty,
+                    is_habit: is_habit,
+                    time_block: this.newTask.time_block,
+                    value_amount: parseInt(this.newTask.value_amount) || 0,
+                    cron_expression: cron_expression,
+                    recurrence_interval_days: recurrence_interval_days,
+                    recurrence_limit: recurrence_limit
+                };
+                
+                await this.fetchApi('/tasks/', { method: 'POST', body: JSON.stringify(payload), hideLoading: true });
+                
+                this.newTask = { 
+                    type: 'TASK', title: '', category_id: '', assignment_type: 'ANYONE', assigned_member_id: '', 
+                    has_penalty: false, time_block: 'ANYTIME', value_amount: 0,
+                    repeat_type: 'daily', weekly_days: [], monthly_date: 1, 
+                    interval_days: 1, end_condition: 'count', recurrence_limit: 7
+                };
+                if(this.currentView === 'tasks') await this.loadAllTasks();
+            } finally {
+                this.isLoading = false;
             }
-
-            const recurrence_limit = this.newTask.end_condition === 'count' ? parseInt(this.newTask.recurrence_limit) : null;
-
-            const payload = {
-                title: this.newTask.title,
-                category_id: this.newTask.category_id || null,
-                assignment_type: this.newTask.assignment_type,
-                assigned_member_id: this.newTask.assignment_type === 'MEMBER' ? (this.newTask.assigned_member_id || null) : null,
-                due_date: new Date().toISOString().split('T')[0],
-                task_type: 'MANUAL',
-                is_recurring: is_recurring,
-                has_penalty: this.newTask.has_penalty,
-                is_habit: is_habit,
-                time_block: this.newTask.time_block,
-                value_amount: parseInt(this.newTask.value_amount) || 0,
-                cron_expression: cron_expression,
-                recurrence_interval_days: recurrence_interval_days,
-                recurrence_limit: recurrence_limit
-            };
-            
-            await this.fetchApi('/tasks/', { method: 'POST', body: JSON.stringify(payload) });
-            
-            this.newTask = { 
-                type: 'TASK', title: '', category_id: '', assignment_type: 'ANYONE', assigned_member_id: '', 
-                has_penalty: false, time_block: 'ANYTIME', value_amount: 0,
-                repeat_type: 'daily', weekly_days: [], monthly_date: 1, 
-                interval_days: 1, end_condition: 'count', recurrence_limit: 7
-            };
-            if(this.currentView === 'tasks') this.loadAllTasks();
         },
 
         openEditModal(task) {
@@ -371,17 +375,19 @@ document.addEventListener('alpine:init', () => {
         },
 
         async bulkDeleteTasks() {
-            if(this.selectedTaskIds.length === 0) return;
-            if(!confirm(`ยืนยันลบงานที่เลือกทั้ง ${this.selectedTaskIds.length} รายการถาวร?`)) return;
+            if (this.selectedTaskIds.length === 0) return;
+            if (!confirm(`ยืนยันลบงานที่เลือกทั้ง ${this.selectedTaskIds.length} รายการถาวร?`)) return;
             
-            // Delete sequentially or via Promise.all. Sequential is safer if many.
-            for (let id of this.selectedTaskIds) {
-                await this.fetchApi(`/tasks/${id}`, { method: 'DELETE' });
+            this.isLoading = true;
+            try {
+                for (let id of this.selectedTaskIds) {
+                    await this.fetchApi(`/tasks/${id}`, { method: 'DELETE', hideLoading: true });
+                }
+                this.tasks = this.tasks.filter(t => !this.selectedTaskIds.includes(t.id));
+                this.selectedTaskIds = [];
+            } finally {
+                this.isLoading = false;
             }
-            
-            // Filter them out
-            this.tasks = this.tasks.filter(t => !this.selectedTaskIds.includes(t.id));
-            this.selectedTaskIds = [];
         },
 
         toggleAllTasks(e) {

@@ -563,8 +563,8 @@
                                 </select>
                                 <div x-show="newTask.end_condition === 'count'" class="flex items-center gap-2">
                                     <span class="text-sm text-gray-600">หยุดหลังจากสร้างไปแล้ว:</span>
-                                    <input type="number" min="1" x-model="newTask.recurrence_limit" class="w-16 bg-white border-none rounded-xl p-2 text-sm text-center shadow-sm">
-                                    <span class="text-sm text-gray-600">ครั้ง</span>
+                                    <input type="number" min="1" max="30" x-model="newTask.recurrence_limit" class="w-16 bg-white border-none rounded-xl p-2 text-sm text-center shadow-sm">
+                                    <span class="text-sm text-gray-600">ครั้ง (สูงสุด 30)</span>
                                 </div>
                             </div>
                         </div>
