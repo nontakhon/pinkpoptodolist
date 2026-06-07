@@ -585,7 +585,14 @@ document.addEventListener('alpine:init', () => {
             if(chime) chime.play();
             
             setTimeout(async () => {
-                await this.fetchApi(`/tasks/${taskId}/complete`, { method: 'PUT' });
+                let payload = {};
+                if (this.currentMember) {
+                    payload.member_id = this.currentMember.id;
+                }
+                await this.fetchApi(`/tasks/${taskId}/complete`, { 
+                    method: 'PUT',
+                    body: JSON.stringify(payload)
+                });
                 this.loadTasks();
                 this.loadSummary();
             }, 300);
@@ -597,7 +604,14 @@ document.addEventListener('alpine:init', () => {
                 btn.closest('.bg-white').classList.add('opacity-0', '-translate-x-10', 'transition-all', 'duration-300');
             }
             setTimeout(async () => {
-                await this.fetchApi(`/tasks/${taskId}/skip`, { method: 'PUT' });
+                let payload = {};
+                if (this.currentMember) {
+                    payload.member_id = this.currentMember.id;
+                }
+                await this.fetchApi(`/tasks/${taskId}/skip`, { 
+                    method: 'PUT',
+                    body: JSON.stringify(payload)
+                });
                 this.loadTasks();
                 this.loadSummary();
             }, 300);
