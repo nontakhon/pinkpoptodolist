@@ -205,7 +205,6 @@ document.addEventListener('alpine:init', () => {
             const d = new Date(dateStr);
             return d.toLocaleDateString('th-TH', { year: 'numeric', month: 'short', day: 'numeric' });
         },
-        },
         
 
         async loadFinance() {
