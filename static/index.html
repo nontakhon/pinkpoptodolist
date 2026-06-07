@@ -132,7 +132,7 @@
 
                 <!-- Overdue Tasks Section -->
                 <div x-show="overdueTasks.length > 0 && selectedDate === days[1]?.date" class="mb-6">
-                    <h3 class="text-sm font-bold text-red-500 mb-3 ml-2 flex items-center gap-1.5">
+                    <h3 class="text-sm font-bold text-red-500 mb-3 ml-2 flex items-center gap-1.5 cursor-pointer hover:bg-red-50 rounded-lg p-1 transition" @click="openOverdueModal()">
                         <span class="text-lg">🔥</span> งานค้าง 
                         <span class="text-[10px] bg-red-100 text-red-600 px-1.5 py-0.5 rounded-full" x-text="overdueTasks.length + ' งาน'"></span>
                     </h3>
@@ -759,6 +759,45 @@
             </div>
         </div>
     </div>
+        <!-- User Overdue Modal -->
+        <div x-show="showOverdueModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex flex-col justify-end" style="display: none;">
+            <div @click.away="showOverdueModal = false" class="bg-white w-full rounded-t-3xl p-6 shadow-2xl relative h-[80vh] flex flex-col" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="translate-y-full" x-transition:enter-end="translate-y-0" x-transition:leave="transition ease-in duration-200" x-transition:leave-start="translate-y-0" x-transition:leave-end="translate-y-full">
+                <button @click="showOverdueModal = false" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 bg-gray-100 rounded-full w-8 h-8 flex items-center justify-center font-bold">✕</button>
+                <div class="mb-4">
+                    <h3 class="text-xl font-black text-red-600 mb-1 pr-8">🔥 รายชื่องานที่ค้างทั้งหมด</h3>
+                    <p class="text-xs text-gray-500">กรุณาสะสางงานเหล่านี้ให้เสร็จสิ้น</p>
+                </div>
+                
+                <div class="overflow-y-auto flex-1 space-y-3 pb-6">
+                    <template x-if="!userOverdueTasks || userOverdueTasks.length === 0">
+                        <div class="text-center p-8 bg-gray-50 rounded-2xl">
+                            <span class="text-4xl block mb-2">🎉</span>
+                            <p class="text-gray-500 font-bold">ไม่มีงานค้างเลย สุดยอดมาก!</p>
+                        </div>
+                    </template>
+                    
+                    <template x-for="task in userOverdueTasks" :key="task.id">
+                        <div class="bg-white rounded-2xl px-4 py-3 shadow-sm border-2 border-red-100 flex items-center gap-3 relative transition-all">
+                            <!-- Complete Checkbox -->
+                            <button @click="if(task.status === 'Pending') { completeTask(task.id, $event); showOverdueModal = false; }" class="flex-shrink-0 w-6 h-6 rounded-full border-[1.5px] flex items-center justify-center transition-colors btn-bounce border-gray-300 hover:border-pink-500">
+                            </button>
+                            
+                            <div class="flex-grow min-w-0" @click="openActionModal(task); showOverdueModal = false;">
+                                <h4 class="font-bold text-gray-800 text-sm truncate" x-text="task.title"></h4>
+                                <div class="text-xs text-red-500 font-semibold mt-0.5">
+                                    ค้างตั้งแต่: <span x-text="formatDate(task.due_date)"></span>
+                                </div>
+                            </div>
+                            
+                            <div class="flex items-center gap-1.5 shrink-0" @click="openActionModal(task); showOverdueModal = false;">
+                                <span x-show="task.category_id" class="text-lg opacity-80" x-text="getCategory(task.category_id)?.icon_emoji"></span>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+            </div>
+        </div>
+
     </div>
 
 

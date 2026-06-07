@@ -525,6 +525,7 @@ def complete_task(task_id: int, background_tasks: BackgroundTasks, payload: Acti
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
     task.status = "Completed"
+    task.due_date = date.today()
     
     action = {"action": "COMPLETED", "timestamp": datetime.now().isoformat()}
     if payload:
@@ -551,6 +552,7 @@ def skip_task(task_id: int, background_tasks: BackgroundTasks, payload: ActionPa
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
     task.status = "Skipped"
+    task.due_date = date.today()
     
     action = {"action": "SKIPPED", "timestamp": datetime.now().isoformat()}
     if payload:
@@ -940,6 +942,83 @@ def get_finance_stats(year: int, month: int, member_id: str = "", db: Session = 
     return {
         "total_amount": total_amount,
         "records": records
+    }
+
+from fastapi import Query
+@app.get("/tasks/overdue", response_model=List[schemas.Task])
+def read_overdue_tasks(member_id: Optional[int] = None, db: Session = Depends(get_db)):
+    today = datetime.now().date()
+    query = db.query(models.Task).filter(
+        models.Task.status == "Pending",
+        models.Task.due_date < today
+    )
+    if member_id:
+        query = query.filter(models.Task.assigned_member_id == member_id)
+    return query.order_by(models.Task.due_date.asc()).all()
+
+@app.get("/admin/advanced_stats")
+def get_advanced_stats(
+    year: int = Query(None),
+    month: int = Query(None),
+    day: int = Query(None),
+    member_id: int = Query(None),
+    db: Session = Depends(get_db)
+):
+    import datetime as dt
+    
+    query = db.query(models.Task).filter(models.Task.status == "Completed")
+    
+    if year and month and day:
+        target_date = dt.date(year, month, day)
+        query = query.filter(models.Task.due_date == target_date)
+    elif year and month:
+        start_date = dt.date(year, month, 1)
+        if month == 12:
+            end_date = dt.date(year + 1, 1, 1) - dt.timedelta(days=1)
+        else:
+            end_date = dt.date(year, month + 1, 1) - dt.timedelta(days=1)
+        query = query.filter(models.Task.due_date >= start_date, models.Task.due_date <= end_date)
+    elif year:
+        start_date = dt.date(year, 1, 1)
+        end_date = dt.date(year, 12, 31)
+        query = query.filter(models.Task.due_date >= start_date, models.Task.due_date <= end_date)
+    else:
+        query = query.filter(models.Task.due_date == dt.date.today())
+        
+    if member_id:
+        query = query.filter(models.Task.assigned_member_id == member_id)
+        
+    tasks = query.all()
+    
+    task_counts = {}
+    for t in tasks:
+        title = t.title
+        task_counts[title] = task_counts.get(title, 0) + 1
+        
+    task_summary = [{"title": k, "count": v} for k, v in task_counts.items()]
+    task_summary.sort(key=lambda x: x["count"], reverse=True)
+    
+    cat_stats = {}
+    members = {m.id: m.name for m in db.query(models.Member).all()}
+    categories = {c.id: c.name for c in db.query(models.Category).all()}
+    
+    for t in tasks:
+        c_id = t.category_id
+        if c_id not in cat_stats:
+            cat_stats[c_id] = {"name": categories.get(c_id, "ไม่ระบุหมวดหมู่"), "members": {}, "total": 0}
+            
+        m_id = t.assigned_member_id
+        m_name = members.get(m_id, "ไม่ระบุสมาชิก")
+        cat_stats[c_id]["members"][m_name] = cat_stats[c_id]["members"].get(m_name, 0) + 1
+        cat_stats[c_id]["total"] += 1
+        
+    category_summary = list(cat_stats.values())
+    category_summary.sort(key=lambda x: x["total"], reverse=True)
+    
+    return {
+        "task_summary": task_summary,
+        "category_summary": category_summary,
+        "total_completed": len(tasks)
     }
 
 @app.put("/tasks/{task_id}/revert", response_model=schemas.Task)

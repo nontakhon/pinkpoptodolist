@@ -39,12 +39,15 @@ document.addEventListener('alpine:init', () => {
 
         showNoteModal: false,
 
-        // Task Details Modal Variables
-        
+        // Task Details Modal Variables        
+        // Modal State
         showPlanModal: false,
         taskToPlan: null,
-        planTargetDate: null,
+        planTargetDate: '',
         planTargetTimeBlock: 'ANYTIME',
+        
+        showOverdueModal: false,
+        userOverdueTasks: [],
         isSubmittingPlan: false,
 
         openPlanModal(task) {
@@ -70,6 +73,12 @@ document.addEventListener('alpine:init', () => {
             }
         },
         
+        async openOverdueModal() {
+            const endpoint = this.currentMember ? `/tasks/overdue?member_id=${this.currentMember.id}` : `/tasks/overdue`;
+            this.userOverdueTasks = await this.fetchApi(endpoint, { hideLoading: true }) || [];
+            this.showOverdueModal = true;
+        },
+
         async skipPlanTask() {
             this.isSubmittingPlan = true;
             try {

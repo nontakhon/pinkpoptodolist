@@ -20,6 +20,19 @@ document.addEventListener('alpine:init', () => {
         
         showEditModal: false,
         editingTask: null,
+        
+        // Advanced Dashboard
+        advStatsFilter: {
+            year: new Date().getFullYear(),
+            month: new Date().getMonth() + 1,
+            day: new Date().getDate(),
+            member_id: ''
+        },
+        advStatsData: {},
+        
+        // Overdue Dashboard
+        adminOverdueTasks: [],
+        showAdminOverdueModal: false,
 
         // Habits
         habitsList: [],
@@ -85,7 +98,11 @@ document.addEventListener('alpine:init', () => {
             await this.loadMasterData();
             
             this.$watch('currentView', (val) => {
-                if (val === 'dashboard') this.loadDashboard();
+                if (val === 'dashboard') {
+                    this.loadDashboard();
+                    this.loadAdvancedStats();
+                    this.loadAdminOverdueTasks();
+                }
                 if (val === 'finance') this.loadFinance();
                 if (val === 'tasks') this.loadAllTasks();
                 if (val === 'habits') this.loadHabits();
@@ -94,8 +111,14 @@ document.addEventListener('alpine:init', () => {
             this.$watch('financeFilter', () => {
                 if(this.currentView === 'finance') this.loadFinance();
             }, { deep: true });
+
+            this.$watch('advStatsFilter', () => {
+                if(this.currentView === 'dashboard') this.loadAdvancedStats();
+            }, { deep: true });
             
             this.loadDashboard();
+            this.loadAdvancedStats();
+            this.loadAdminOverdueTasks();
             this.connectWebSocket();
         },
 
@@ -150,7 +173,41 @@ document.addEventListener('alpine:init', () => {
                 });
             }
         },
+
+        async loadAdvancedStats() {
+            const f = this.advStatsFilter;
+            let qs = [];
+            if (f.year) qs.push(`year=${f.year}`);
+            if (f.month) qs.push(`month=${f.month}`);
+            if (f.day) qs.push(`day=${f.day}`);
+            if (f.member_id) qs.push(`member_id=${f.member_id}`);
+            
+            const url = '/admin/advanced_stats' + (qs.length ? '?' + qs.join('&') : '');
+            this.advStatsData = await this.fetchApi(url, { hideLoading: true }) || {};
+        },
+
+        async loadAdminOverdueTasks() {
+            this.adminOverdueTasks = await this.fetchApi('/tasks/overdue', { hideLoading: true }) || [];
+        },
+
+        getCategoryIcon(id) {
+            const cat = this.categories.find(c => c.id === id);
+            return cat ? cat.icon_emoji : '📁';
+        },
         
+        getMemberName(id) {
+            const m = this.members.find(m => m.id === id);
+            return m ? m.name : 'ไม่ระบุ';
+        },
+        
+        formatDate(dateStr) {
+            if (!dateStr) return '';
+            const d = new Date(dateStr);
+            return d.toLocaleDateString('th-TH', { year: 'numeric', month: 'short', day: 'numeric' });
+        },
+        },
+        
+
         async loadFinance() {
             const data = await this.fetchApi(`/admin/finance_stats?year=${this.financeFilter.year}&month=${this.financeFilter.month}&member_id=${this.financeFilter.member_id}`);
             if (data) this.financeData = data;

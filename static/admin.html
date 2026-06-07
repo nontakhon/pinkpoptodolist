@@ -78,6 +78,16 @@
                 <!-- 1. DASHBOARD -->
                 <div x-show="currentView === 'dashboard'" style="display: none;">
                     <h2 class="text-2xl font-black text-gray-800 mb-6">ภาพรวม (Dashboard)</h2>
+                    
+                    <!-- Overdue Tasks Widget -->
+                    <div class="mb-6 bg-red-50 p-5 rounded-2xl shadow-sm border border-red-100 flex justify-between items-center cursor-pointer hover:bg-red-100 transition-colors" @click="showAdminOverdueModal = true">
+                        <div>
+                            <h3 class="font-bold text-red-800 text-lg">🔥 งานค้างทั้งหมด</h3>
+                            <p class="text-red-600 text-sm">คลิกเพื่อดูรายชื่องานที่ค้างของทุกคน</p>
+                        </div>
+                        <div class="text-3xl font-black text-red-600" x-text="adminOverdueTasks.length">0</div>
+                    </div>
+
                     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
                         <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
                             <h3 class="font-bold text-gray-700 mb-4">สมาชิกที่ใช้งาน (รายวัน)</h3>
@@ -90,6 +100,107 @@
                         <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 lg:col-span-2">
                             <h3 class="font-bold text-gray-700 mb-4">สัดส่วนงานที่ทำเสร็จของเดือนนี้ (รายคน)</h3>
                             <div class="h-64 relative"><canvas id="memberChart"></canvas></div>
+                        </div>
+                    </div>
+
+                    <!-- ADVANCED STATS SECTION -->
+                    <div class="mt-8">
+                        <h2 class="text-2xl font-black text-gray-800 mb-6">📊 สรุปผลงานเชิงลึก (Advanced Stats)</h2>
+                        <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 mb-6">
+                            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+                                <div>
+                                    <label class="text-xs font-bold text-gray-500 block mb-1">วัน</label>
+                                    <select x-model="advStatsFilter.day" class="w-full bg-gray-50 border border-gray-200 rounded-xl p-2.5">
+                                        <option value="">-- ทั้งเดือน --</option>
+                                        <template x-for="d in 31">
+                                            <option :value="d" x-text="d"></option>
+                                        </template>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="text-xs font-bold text-gray-500 block mb-1">เดือน</label>
+                                    <select x-model="advStatsFilter.month" class="w-full bg-gray-50 border border-gray-200 rounded-xl p-2.5">
+                                        <option value="">-- ทั้งปี --</option>
+                                        <template x-for="m in 12">
+                                            <option :value="m" x-text="'เดือน ' + m"></option>
+                                        </template>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="text-xs font-bold text-gray-500 block mb-1">ปี</label>
+                                    <select x-model="advStatsFilter.year" class="w-full bg-gray-50 border border-gray-200 rounded-xl p-2.5">
+                                        <option value="">-- ทุกปี --</option>
+                                        <option value="2026">2026</option>
+                                        <option value="2027">2027</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="text-xs font-bold text-gray-500 block mb-1">สมาชิก</label>
+                                    <select x-model="advStatsFilter.member_id" class="w-full bg-gray-50 border border-gray-200 rounded-xl p-2.5">
+                                        <option value="">-- ทุกคน --</option>
+                                        <template x-for="m in members" :key="m.id">
+                                            <option :value="m.id" x-text="m.name"></option>
+                                        </template>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                            <!-- Task Summary Table -->
+                            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                                <div class="bg-pink-50 p-4 border-b border-pink-100 flex justify-between items-center">
+                                    <h3 class="font-bold text-pink-800">📌 สรุปจำนวนครั้งภารกิจ</h3>
+                                    <span class="text-xs font-bold bg-white text-pink-600 px-2 py-1 rounded" x-text="'รวม ' + (advStatsData.total_completed || 0) + ' งาน'"></span>
+                                </div>
+                                <table class="w-full text-left text-sm">
+                                    <thead class="bg-gray-50 text-gray-500">
+                                        <tr>
+                                            <th class="p-3 font-semibold">ชื่องาน</th>
+                                            <th class="p-3 font-semibold text-right">ทำเสร็จ</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <template x-if="!advStatsData.task_summary || advStatsData.task_summary.length === 0">
+                                            <tr><td colspan="2" class="p-4 text-center text-gray-400">ไม่มีข้อมูล</td></tr>
+                                        </template>
+                                        <template x-for="task in advStatsData.task_summary" :key="task.title">
+                                            <tr class="border-t border-gray-50 hover:bg-gray-50">
+                                                <td class="p-3 text-gray-800" x-text="task.title"></td>
+                                                <td class="p-3 text-gray-600 font-bold text-right" x-text="task.count + ' ครั้ง'"></td>
+                                            </tr>
+                                        </template>
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <!-- Category Summary Table -->
+                            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                                <div class="bg-blue-50 p-4 border-b border-blue-100">
+                                    <h3 class="font-bold text-blue-800">🏷️ สรุปตามหมวดหมู่</h3>
+                                </div>
+                                <div class="p-0">
+                                    <template x-if="!advStatsData.category_summary || advStatsData.category_summary.length === 0">
+                                        <div class="p-4 text-center text-gray-400">ไม่มีข้อมูล</div>
+                                    </template>
+                                    <template x-for="cat in advStatsData.category_summary" :key="cat.name">
+                                        <div class="border-b border-gray-100 p-4 hover:bg-gray-50">
+                                            <div class="flex justify-between items-center mb-2">
+                                                <h4 class="font-bold text-gray-700" x-text="cat.name"></h4>
+                                                <span class="text-sm font-black text-blue-600 bg-blue-100 px-2 py-1 rounded" x-text="'รวม ' + cat.total + ' ครั้ง'"></span>
+                                            </div>
+                                            <div class="grid grid-cols-2 gap-2 mt-2">
+                                                <template x-for="(count, memberName) in cat.members" :key="memberName">
+                                                    <div class="text-xs bg-white border border-gray-200 rounded p-1.5 flex justify-between">
+                                                        <span class="text-gray-600" x-text="memberName"></span>
+                                                        <span class="font-bold text-gray-800" x-text="count"></span>
+                                                    </div>
+                                                </template>
+                                            </div>
+                                        </div>
+                                    </template>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -639,6 +750,47 @@
                         </button>
                     </div>
                 </template>
+            </div>
+        </div>
+
+        <!-- Admin Overdue Tasks Modal -->
+        <div x-show="showAdminOverdueModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" style="display: none;">
+            <div @click.away="showAdminOverdueModal = false" class="bg-white rounded-3xl p-6 w-full max-w-lg shadow-2xl overflow-y-auto max-h-[90vh]">
+                <div class="flex justify-between items-center mb-6 border-b border-gray-100 pb-4">
+                    <h2 class="text-xl font-black text-red-600">🔥 งานค้างทั้งหมด (Overdue)</h2>
+                    <button @click="showAdminOverdueModal = false" class="text-gray-400 hover:text-gray-600">✕</button>
+                </div>
+                
+                <div class="space-y-3">
+                    <template x-if="!adminOverdueTasks || adminOverdueTasks.length === 0">
+                        <div class="text-center p-8 bg-gray-50 rounded-2xl">
+                            <span class="text-4xl block mb-2">🎉</span>
+                            <p class="text-gray-500 font-bold">ไม่มีงานค้างเลย สุดยอดมาก!</p>
+                        </div>
+                    </template>
+                    
+                    <template x-for="task in adminOverdueTasks" :key="task.id">
+                        <div class="bg-white border border-red-100 rounded-2xl p-4 flex justify-between items-center hover:shadow-md transition">
+                            <div class="flex gap-3 items-center">
+                                <div class="w-10 h-10 rounded-full bg-red-50 flex items-center justify-center text-red-500">
+                                    <span x-text="getCategoryIcon(task.category_id)"></span>
+                                </div>
+                                <div>
+                                    <h4 class="font-bold text-gray-800" x-text="task.title"></h4>
+                                    <div class="text-xs text-red-500 font-semibold mt-0.5">
+                                        ค้างตั้งแต่วันที่: <span x-text="formatDate(task.due_date)"></span>
+                                    </div>
+                                    <div class="text-xs text-gray-500 mt-0.5">
+                                        คนทำ: <span x-text="getMemberName(task.assigned_member_id)" class="font-bold text-gray-700"></span>
+                                    </div>
+                                </div>
+                            </div>
+                            <button @click="openEditModal(task); showAdminOverdueModal = false" class="bg-red-50 text-red-600 px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-red-100">
+                                จัดการ
+                            </button>
+                        </div>
+                    </template>
+                </div>
             </div>
         </div>
 
