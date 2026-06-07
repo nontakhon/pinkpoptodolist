@@ -962,6 +962,7 @@ def get_advanced_stats(
     month: int = Query(None),
     day: int = Query(None),
     member_id: int = Query(None),
+    category_id: int = Query(None),
     db: Session = Depends(get_db)
 ):
     import datetime as dt
@@ -987,6 +988,9 @@ def get_advanced_stats(
         
     if member_id:
         query = query.filter(models.Task.assigned_member_id == member_id)
+        
+    if category_id:
+        query = query.filter(models.Task.category_id == category_id)
         
     tasks = query.all()
     

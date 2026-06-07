@@ -107,7 +107,16 @@
                     <div class="mt-8">
                         <h2 class="text-2xl font-black text-gray-800 mb-6">📊 สรุปผลงานเชิงลึก (Advanced Stats)</h2>
                         <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 mb-6">
-                            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+                            <div class="grid grid-cols-1 md:grid-cols-5 gap-4 mb-4">
+                                <div>
+                                    <label class="text-xs font-bold text-gray-500 block mb-1">หมวดหมู่</label>
+                                    <select x-model="advStatsFilter.category_id" class="w-full bg-gray-50 border border-gray-200 rounded-xl p-2.5">
+                                        <option value="">-- ทุกหมวดหมู่ --</option>
+                                        <template x-for="cat in categories" :key="cat.id">
+                                            <option :value="cat.id" x-text="cat.icon_emoji + ' ' + cat.name"></option>
+                                        </template>
+                                    </select>
+                                </div>
                                 <div>
                                     <label class="text-xs font-bold text-gray-500 block mb-1">วัน</label>
                                     <select x-model="advStatsFilter.day" class="w-full bg-gray-50 border border-gray-200 rounded-xl p-2.5">
@@ -428,6 +437,12 @@
                                 <template x-for="c in categories" :key="c.id">
                                     <option :value="c.id" x-text="c.icon_emoji + ' ' + c.name"></option>
                                 </template>
+                            </select>
+                            <select x-model="filterStatus" class="border border-gray-200 rounded-xl p-2 text-sm text-gray-600 bg-white font-bold">
+                                <option value="">ทุกสถานะ</option>
+                                <option value="Completed" class="text-green-600">✅ Completed</option>
+                                <option value="Pending" class="text-orange-600">⏳ Pending</option>
+                                <option value="Skipped" class="text-red-600">❌ Skipped</option>
                             </select>
                             <select x-model="filterMemberId" class="border border-gray-200 rounded-xl p-2 text-sm text-gray-600 bg-white">
                                 <option value="">ทุกคน</option>

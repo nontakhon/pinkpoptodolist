@@ -12,17 +12,19 @@ document.addEventListener('alpine:init', () => {
         dashboardStats: null,
         
         searchQuery: '',
-        filterYear: '',
-        filterMonth: '',
-        filterDay: '',
+        filterYear: new Date().getFullYear().toString(),
+        filterMonth: (new Date().getMonth() + 1).toString().padStart(2, '0'),
+        filterDay: new Date().getDate().toString().padStart(2, '0'),
         filterMemberId: '',
         filterCategoryId: '',
+        filterStatus: '',
         
         showEditModal: false,
         editingTask: null,
         
         // Advanced Dashboard
         advStatsFilter: {
+            category_id: '',
             year: new Date().getFullYear(),
             month: new Date().getMonth() + 1,
             day: new Date().getDate(),
@@ -177,6 +179,7 @@ document.addEventListener('alpine:init', () => {
         async loadAdvancedStats() {
             const f = this.advStatsFilter;
             let qs = [];
+            if (f.category_id) qs.push(`category_id=${f.category_id}`);
             if (f.year) qs.push(`year=${f.year}`);
             if (f.month) qs.push(`month=${f.month}`);
             if (f.day) qs.push(`day=${f.day}`);
@@ -475,6 +478,9 @@ document.addEventListener('alpine:init', () => {
                 }
                 if (this.filterCategoryId) {
                     match = match && (t.category_id == this.filterCategoryId);
+                }
+                if (this.filterStatus) {
+                    match = match && (t.status === this.filterStatus);
                 }
                 
                 return match;
