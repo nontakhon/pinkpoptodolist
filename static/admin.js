@@ -22,12 +22,11 @@ document.addEventListener('alpine:init', () => {
         showEditModal: false,
         editingTask: null,
         
-        // Advanced Dashboard
         advStatsFilter: {
             category_id: '',
             year: new Date().getFullYear(),
             month: new Date().getMonth() + 1,
-            day: new Date().getDate(),
+            day: '',
             member_id: ''
         },
         advStatsData: {},
