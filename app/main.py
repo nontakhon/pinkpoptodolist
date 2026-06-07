@@ -967,7 +967,7 @@ def get_advanced_stats(
 ):
     import datetime as dt
     
-    query = db.query(models.Task).filter(models.Task.status == "Completed")
+    query = db.query(models.Task).filter(models.Task.status.in_(["Completed", "Pending"]))
     
     if year and month and day:
         target_date = dt.date(year, month, day)
@@ -994,35 +994,60 @@ def get_advanced_stats(
         
     tasks = query.all()
     
+    # 1. Overview Stats
+    total_completed = 0
+    total_pending = 0
+    total_value = 0
+    
+    # 2. Task Summary
     task_counts = {}
-    for t in tasks:
-        title = t.title
-        task_counts[title] = task_counts.get(title, 0) + 1
-        
-    task_summary = [{"title": k, "count": v} for k, v in task_counts.items()]
-    task_summary.sort(key=lambda x: x["count"], reverse=True)
     
-    cat_stats = {}
+    # 3. Member Contribution
     members = {m.id: m.name for m in db.query(models.Member).all()}
-    categories = {c.id: c.name for c in db.query(models.Category).all()}
+    member_stats = {}
     
     for t in tasks:
-        c_id = t.category_id
-        if c_id not in cat_stats:
-            cat_stats[c_id] = {"name": categories.get(c_id, "ไม่ระบุหมวดหมู่"), "members": {}, "total": 0}
+        # Overview
+        if t.status == "Completed":
+            total_completed += 1
+            total_value += (t.value_amount or 0)
+        elif t.status == "Pending":
+            total_pending += 1
             
-        m_id = t.assigned_member_id
-        m_name = members.get(m_id, "ไม่ระบุสมาชิก")
-        cat_stats[c_id]["members"][m_name] = cat_stats[c_id]["members"].get(m_name, 0) + 1
-        cat_stats[c_id]["total"] += 1
+        # Task Summary
+        title = t.title
+        if title not in task_counts:
+            task_counts[title] = {"title": title, "completed": 0, "pending": 0, "value": 0}
+            
+        if t.status == "Completed":
+            task_counts[title]["completed"] += 1
+            task_counts[title]["value"] += (t.value_amount or 0)
+        elif t.status == "Pending":
+            task_counts[title]["pending"] += 1
+            
+        # Member Contribution (only for completed tasks, since pending aren't done yet)
+        if t.status == "Completed":
+            m_id = t.assigned_member_id
+            m_name = members.get(m_id, "ไม่ระบุสมาชิก")
+            if m_name not in member_stats:
+                member_stats[m_name] = {"name": m_name, "completed": 0, "value": 0}
+            member_stats[m_name]["completed"] += 1
+            member_stats[m_name]["value"] += (t.value_amount or 0)
         
-    category_summary = list(cat_stats.values())
-    category_summary.sort(key=lambda x: x["total"], reverse=True)
+    task_summary = list(task_counts.values())
+    task_summary.sort(key=lambda x: x["completed"], reverse=True)
+    
+    member_summary = list(member_stats.values())
+    member_summary.sort(key=lambda x: x["value"], reverse=True)
     
     return {
+        "overview": {
+            "total_completed": total_completed,
+            "total_pending": total_pending,
+            "total_value": total_value
+        },
         "task_summary": task_summary,
-        "category_summary": category_summary,
-        "total_completed": len(tasks)
+        "member_summary": member_summary
     }
 
 @app.put("/tasks/{task_id}/revert", response_model=schemas.Task)

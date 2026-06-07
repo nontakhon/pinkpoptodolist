@@ -161,59 +161,86 @@
                             </div>
                         </template>
 
-                        <div x-show="advStatsFilter.category_id" class="grid grid-cols-1 lg:grid-cols-2 gap-6" style="display: none;">
-                            <!-- Task Summary Table -->
-                            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-                                <div class="bg-pink-50 p-4 border-b border-pink-100 flex justify-between items-center">
-                                    <h3 class="font-bold text-pink-800">📌 สรุปจำนวนครั้งภารกิจ</h3>
-                                    <span class="text-xs font-bold bg-white text-pink-600 px-2 py-1 rounded" x-text="'รวม ' + (advStatsData.total_completed || 0) + ' งาน'"></span>
+                        <div x-show="advStatsFilter.category_id" style="display: none;">
+                            <!-- Overview Cards -->
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                                <div class="bg-green-50 p-4 rounded-xl border border-green-100 flex justify-between items-center">
+                                    <div>
+                                        <div class="text-green-800 font-bold text-sm">✅ รวมงานที่ทำเสร็จ</div>
+                                        <div class="text-2xl font-black text-green-600 mt-1" x-text="(advStatsData.overview?.total_completed || 0) + ' งาน'"></div>
+                                    </div>
                                 </div>
-                                <table class="w-full text-left text-sm">
-                                    <thead class="bg-gray-50 text-gray-500">
-                                        <tr>
-                                            <th class="p-3 font-semibold">ชื่องาน</th>
-                                            <th class="p-3 font-semibold text-right">ทำเสร็จ</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <template x-if="!advStatsData.task_summary || advStatsData.task_summary.length === 0">
-                                            <tr><td colspan="2" class="p-4 text-center text-gray-400">ไม่มีข้อมูล</td></tr>
-                                        </template>
-                                        <template x-for="task in advStatsData.task_summary" :key="task.title">
-                                            <tr class="border-t border-gray-50 hover:bg-gray-50">
-                                                <td class="p-3 text-gray-800" x-text="task.title"></td>
-                                                <td class="p-3 text-gray-600 font-bold text-right" x-text="task.count + ' ครั้ง'"></td>
-                                            </tr>
-                                        </template>
-                                    </tbody>
-                                </table>
+                                <div class="bg-orange-50 p-4 rounded-xl border border-orange-100 flex justify-between items-center">
+                                    <div>
+                                        <div class="text-orange-800 font-bold text-sm">⏳ รวมงานค้าง / รอทำ</div>
+                                        <div class="text-2xl font-black text-orange-600 mt-1" x-text="(advStatsData.overview?.total_pending || 0) + ' งาน'"></div>
+                                    </div>
+                                </div>
+                                <div class="bg-pink-50 p-4 rounded-xl border border-pink-100 flex justify-between items-center">
+                                    <div>
+                                        <div class="text-pink-800 font-bold text-sm">💰 มูลค่ารวมที่ทำได้</div>
+                                        <div class="text-2xl font-black text-pink-600 mt-1" x-text="'฿' + (advStatsData.overview?.total_value || 0).toLocaleString()"></div>
+                                    </div>
+                                </div>
                             </div>
 
-                            <!-- Category Summary Table -->
-                            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-                                <div class="bg-blue-50 p-4 border-b border-blue-100">
-                                    <h3 class="font-bold text-blue-800">🏷️ สรุปตามหมวดหมู่</h3>
+                            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                                <!-- Task Summary Table -->
+                                <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                                    <div class="bg-gray-50 p-4 border-b border-gray-100">
+                                        <h3 class="font-bold text-gray-800">📌 สรุปตามชื่องาน</h3>
+                                    </div>
+                                    <table class="w-full text-left text-sm">
+                                        <thead class="bg-gray-100 text-gray-500 text-xs">
+                                            <tr>
+                                                <th class="p-3 font-semibold">ชื่องาน</th>
+                                                <th class="p-3 font-semibold text-center text-green-600">✅ เสร็จ</th>
+                                                <th class="p-3 font-semibold text-center text-orange-600">⏳ ค้าง</th>
+                                                <th class="p-3 font-semibold text-right text-pink-600">💰 มูลค่า (฿)</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <template x-if="!advStatsData.task_summary || advStatsData.task_summary.length === 0">
+                                                <tr><td colspan="4" class="p-4 text-center text-gray-400">ไม่มีข้อมูล</td></tr>
+                                            </template>
+                                            <template x-for="task in advStatsData.task_summary" :key="task.title">
+                                                <tr class="border-t border-gray-50 hover:bg-gray-50">
+                                                    <td class="p-3 text-gray-800 font-medium" x-text="task.title"></td>
+                                                    <td class="p-3 text-green-600 font-bold text-center" x-text="task.completed"></td>
+                                                    <td class="p-3 text-orange-500 font-bold text-center" x-text="task.pending"></td>
+                                                    <td class="p-3 text-pink-600 font-bold text-right" x-text="task.value.toLocaleString()"></td>
+                                                </tr>
+                                            </template>
+                                        </tbody>
+                                    </table>
                                 </div>
-                                <div class="p-0">
-                                    <template x-if="!advStatsData.category_summary || advStatsData.category_summary.length === 0">
-                                        <div class="p-4 text-center text-gray-400">ไม่มีข้อมูล</div>
-                                    </template>
-                                    <template x-for="cat in advStatsData.category_summary" :key="cat.name">
-                                        <div class="border-b border-gray-100 p-4 hover:bg-gray-50">
-                                            <div class="flex justify-between items-center mb-2">
-                                                <h4 class="font-bold text-gray-700" x-text="cat.name"></h4>
-                                                <span class="text-sm font-black text-blue-600 bg-blue-100 px-2 py-1 rounded" x-text="'รวม ' + cat.total + ' ครั้ง'"></span>
-                                            </div>
-                                            <div class="grid grid-cols-2 gap-2 mt-2">
-                                                <template x-for="(count, memberName) in cat.members" :key="memberName">
-                                                    <div class="text-xs bg-white border border-gray-200 rounded p-1.5 flex justify-between">
-                                                        <span class="text-gray-600" x-text="memberName"></span>
-                                                        <span class="font-bold text-gray-800" x-text="count"></span>
-                                                    </div>
-                                                </template>
-                                            </div>
-                                        </div>
-                                    </template>
+
+                                <!-- Member Contribution Table -->
+                                <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                                    <div class="bg-blue-50 p-4 border-b border-blue-100">
+                                        <h3 class="font-bold text-blue-800">👤 ผลงานรายบุคคล (เฉพาะที่เสร็จแล้ว)</h3>
+                                    </div>
+                                    <table class="w-full text-left text-sm">
+                                        <thead class="bg-blue-100 text-blue-600 text-xs">
+                                            <tr>
+                                                <th class="p-3 font-semibold">ชื่อสมาชิก</th>
+                                                <th class="p-3 font-semibold text-center">✅ จำนวนงาน</th>
+                                                <th class="p-3 font-semibold text-right">💰 มูลค่าผลงาน (฿)</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <template x-if="!advStatsData.member_summary || advStatsData.member_summary.length === 0">
+                                                <tr><td colspan="3" class="p-4 text-center text-gray-400">ไม่มีข้อมูล</td></tr>
+                                            </template>
+                                            <template x-for="member in advStatsData.member_summary" :key="member.name">
+                                                <tr class="border-t border-gray-50 hover:bg-gray-50">
+                                                    <td class="p-3 text-gray-800 font-medium" x-text="member.name"></td>
+                                                    <td class="p-3 text-gray-600 font-bold text-center" x-text="member.completed + ' ครั้ง'"></td>
+                                                    <td class="p-3 text-pink-600 font-black text-right" x-text="'฿' + member.value.toLocaleString()"></td>
+                                                </tr>
+                                            </template>
+                                        </tbody>
+                                    </table>
                                 </div>
                             </div>
                         </div>
