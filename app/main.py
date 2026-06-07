@@ -488,6 +488,37 @@ def read_tasks(background_tasks: BackgroundTasks, skip: int = 0, limit: int = 10
 def read_templates(db: Session = Depends(get_db)):
     return db.query(models.Task).filter(models.Task.status == "Template").all()
 
+class ActionPayload(BaseModel):
+    member_id: Optional[int] = None
+
+class PlanPayload(BaseModel):
+    new_date: date
+    new_time_block: str
+    member_id: Optional[int] = None
+
+@app.put("/tasks/{task_id}/plan", response_model=schemas.Task)
+def plan_task(task_id: int, payload: PlanPayload, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
+    task = db.query(models.Task).filter(models.Task.id == task_id).first()
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found")
+        
+    task.due_date = payload.new_date
+    task.time_block = payload.new_time_block
+    
+    action = {"action": "RESCHEDULED", "timestamp": datetime.now().isoformat(), "new_date": str(payload.new_date), "new_time_block": payload.new_time_block}
+    if payload.member_id:
+        action["member_id"] = payload.member_id
+        
+    history = list(task.action_history or [])
+    history.append(action)
+    task.action_history = history
+    
+    db.commit()
+    if background_tasks:
+        background_tasks.add_task(manager.broadcast, '{"event": "refresh"}')
+    db.refresh(task)
+    return task
+
 @app.put("/tasks/{task_id}/complete", response_model=schemas.Task)
 def complete_task(task_id: int, background_tasks: BackgroundTasks, payload: ActionPayload = None, db: Session = Depends(get_db)):
     task = db.query(models.Task).filter(models.Task.id == task_id).first()
