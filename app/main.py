@@ -941,7 +941,6 @@ def get_finance_stats(year: int, month: int, member_id: str = "", db: Session = 
         "total_amount": total_amount,
         "records": records
     }
-app.mount("/", StaticFiles(directory="static", html=True), name="static")
 
 @app.put("/tasks/{task_id}/revert", response_model=schemas.Task)
 def revert_task(task_id: int, background_tasks: BackgroundTasks, payload: ActionPayload = None, db: Session = Depends(get_db)):
@@ -953,8 +952,8 @@ def revert_task(task_id: int, background_tasks: BackgroundTasks, payload: Action
     action = {"action": "REVERTED", "timestamp": datetime.now().isoformat()}
     if payload:
         if payload.member_id: action["member_id"] = payload.member_id
-        if payload.note: action["note"] = payload.note
-        if payload.image_url: action["image_url"] = payload.image_url
+        if getattr(payload, 'note', None): action["note"] = payload.note
+        if getattr(payload, 'image_url', None): action["image_url"] = payload.image_url
         
     history = list(task.action_history) if task.action_history else []
     history.append(action)
@@ -966,3 +965,4 @@ def revert_task(task_id: int, background_tasks: BackgroundTasks, payload: Action
     db.refresh(task)
     return task
 
+app.mount("/", StaticFiles(directory="static", html=True), name="static")
