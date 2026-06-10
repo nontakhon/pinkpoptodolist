@@ -1073,4 +1073,130 @@ def revert_task(task_id: int, background_tasks: BackgroundTasks, payload: Action
     db.refresh(task)
     return task
 
+def parse_date_str(date_str: str) -> date:
+    try:
+        if "-" in date_str:
+            return datetime.strptime(date_str, "%Y-%m-%d").date()
+        else:
+            return datetime.strptime(date_str, "%Y%m%d").date()
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid date format. Use YYYY-MM-DD or YYYYMMDD")
+
+@app.get("/api/external/sum/{date_str}")
+def get_external_sum(date_str: str, db: Session = Depends(get_db)):
+    target_date = parse_date_str(date_str)
+    
+    query = db.query(models.Task).filter(
+        models.Task.due_date == target_date,
+        models.Task.status.in_(["Completed", "Pending", "Skipped"])
+    )
+    tasks = query.all()
+    
+    total_tasks = len(tasks)
+    completed_tasks = sum(1 for t in tasks if t.status == "Completed")
+    pending_tasks = sum(1 for t in tasks if t.status == "Pending")
+    
+    members = {m.id: m.name for m in db.query(models.Member).all()}
+    by_member = {}
+    
+    categories = {c.id: c.name for c in db.query(models.Category).all()}
+    by_category = {}
+    
+    for t in tasks:
+        if t.assignment_type == "MEMBER" and t.assigned_member_id:
+            m_name = members.get(t.assigned_member_id, "ไม่ระบุสมาชิก")
+        elif t.assignment_type == "ANYONE":
+            m_name = "⭐ ใครก็ได้ (ANYONE)"
+        else:
+            m_name = "ไม่ได้มอบหมาย"
+            
+        if m_name not in by_member:
+            by_member[m_name] = {"name": m_name, "completed": 0, "pending": 0}
+            
+        if t.status == "Completed":
+            by_member[m_name]["completed"] += 1
+        elif t.status == "Pending":
+            by_member[m_name]["pending"] += 1
+            
+        c_name = categories.get(t.category_id, "ไม่ระบุหมวดหมู่")
+        if c_name not in by_category:
+            by_category[c_name] = {"name": c_name, "completed": 0, "pending": 0}
+            
+        if t.status == "Completed":
+            by_category[c_name]["completed"] += 1
+        elif t.status == "Pending":
+            by_category[c_name]["pending"] += 1
+            
+    return {
+        "date": str(target_date),
+        "overview": {
+            "total_tasks": total_tasks,
+            "completed_tasks": completed_tasks,
+            "pending_tasks": pending_tasks
+        },
+        "by_member": list(by_member.values()),
+        "by_category": list(by_category.values())
+    }
+
+@app.get("/api/external/todo/{date_str}")
+def get_external_todo(date_str: str, db: Session = Depends(get_db)):
+    target_date = parse_date_str(date_str)
+    
+    query = db.query(models.Task).filter(
+        models.Task.status == "Pending",
+        models.Task.due_date <= target_date
+    )
+    tasks = query.all()
+    
+    total_pending = len(tasks)
+    due_today_count = sum(1 for t in tasks if t.due_date == target_date)
+    overdue_count = sum(1 for t in tasks if t.due_date < target_date)
+    
+    tasks_list = []
+    for t in tasks:
+        title = t.title
+        if t.due_date < target_date:
+            title += " (งานค้าง)"
+        tasks_list.append(title)
+        
+    members = {m.id: m.name for m in db.query(models.Member).all()}
+    by_member = {}
+    
+    categories = {c.id: c.name for c in db.query(models.Category).all()}
+    by_category = {}
+    
+    for t in tasks:
+        if t.assignment_type == "MEMBER" and t.assigned_member_id:
+            m_name = members.get(t.assigned_member_id, "ไม่ระบุสมาชิก")
+        elif t.assignment_type == "ANYONE":
+            m_name = "⭐ ใครก็ได้ (ANYONE)"
+        else:
+            m_name = "ไม่ได้มอบหมาย"
+            
+        if m_name not in by_member:
+            by_member[m_name] = {"name": m_name, "due_today": 0, "overdue": 0}
+            
+        if t.due_date == target_date:
+            by_member[m_name]["due_today"] += 1
+        elif t.due_date < target_date:
+            by_member[m_name]["overdue"] += 1
+            
+        c_name = categories.get(t.category_id, "ไม่ระบุหมวดหมู่")
+        if c_name not in by_category:
+            by_category[c_name] = {"name": c_name, "pending": 0}
+            
+        by_category[c_name]["pending"] += 1
+            
+    return {
+        "date": str(target_date),
+        "overview": {
+            "total_pending": total_pending,
+            "due_today": due_today_count,
+            "overdue": overdue_count
+        },
+        "tasks_list": tasks_list,
+        "by_member": list(by_member.values()),
+        "by_category": list(by_category.values())
+    }
+
 app.mount("/", StaticFiles(directory="static", html=True), name="static")
