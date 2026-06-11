@@ -1111,8 +1111,9 @@ def get_external_sum(date_str: str, db: Session = Depends(get_db)):
             m_name = "ไม่ได้มอบหมาย"
             
         if m_name not in by_member:
-            by_member[m_name] = {"name": m_name, "completed": 0, "pending": 0}
+            by_member[m_name] = {"name": m_name, "total": 0, "completed": 0, "pending": 0}
             
+        by_member[m_name]["total"] += 1
         if t.status == "Completed":
             by_member[m_name]["completed"] += 1
         elif t.status == "Pending":
@@ -1127,6 +1128,14 @@ def get_external_sum(date_str: str, db: Session = Depends(get_db)):
         elif t.status == "Pending":
             by_category[c_name]["pending"] += 1
             
+    def sort_member_sum(m):
+        name = m["name"]
+        is_unassigned = name in ["⭐ ใครก็ได้ (ANYONE)", "ไม่ได้มอบหมาย"]
+        return (is_unassigned, -m["total"])
+        
+    by_member_list = list(by_member.values())
+    by_member_list.sort(key=sort_member_sum)
+            
     return {
         "date": str(target_date),
         "overview": {
@@ -1134,7 +1143,7 @@ def get_external_sum(date_str: str, db: Session = Depends(get_db)):
             "completed_tasks": completed_tasks,
             "pending_tasks": pending_tasks
         },
-        "by_member": list(by_member.values()),
+        "by_member": by_member_list,
         "by_category": list(by_category.values())
     }
 
@@ -1174,8 +1183,9 @@ def get_external_todo(date_str: str, db: Session = Depends(get_db)):
             m_name = "ไม่ได้มอบหมาย"
             
         if m_name not in by_member:
-            by_member[m_name] = {"name": m_name, "due_today": 0, "overdue": 0}
+            by_member[m_name] = {"name": m_name, "total": 0, "due_today": 0, "overdue": 0}
             
+        by_member[m_name]["total"] += 1
         if t.due_date == target_date:
             by_member[m_name]["due_today"] += 1
         elif t.due_date < target_date:
@@ -1183,9 +1193,17 @@ def get_external_todo(date_str: str, db: Session = Depends(get_db)):
             
         c_name = categories.get(t.category_id, "ไม่ระบุหมวดหมู่")
         if c_name not in by_category:
-            by_category[c_name] = {"name": c_name, "pending": 0}
+            by_category[c_name] = {"name": c_name, "total_pending": 0}
             
-        by_category[c_name]["pending"] += 1
+        by_category[c_name]["total_pending"] += 1
+        
+    def sort_member_todo(m):
+        name = m["name"]
+        is_unassigned = name in ["⭐ ใครก็ได้ (ANYONE)", "ไม่ได้มอบหมาย"]
+        return (is_unassigned, -m["total"])
+        
+    by_member_list = list(by_member.values())
+    by_member_list.sort(key=sort_member_todo)
             
     return {
         "date": str(target_date),
@@ -1195,7 +1213,7 @@ def get_external_todo(date_str: str, db: Session = Depends(get_db)):
             "overdue": overdue_count
         },
         "tasks_list": tasks_list,
-        "by_member": list(by_member.values()),
+        "by_member": by_member_list,
         "by_category": list(by_category.values())
     }
 
