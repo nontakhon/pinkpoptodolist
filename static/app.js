@@ -254,15 +254,15 @@ document.addEventListener('alpine:init', () => {
             try {
                 const d = new Date(dateStr);
                 if (isNaN(d.getTime())) return '';
-                const weekdays = ['อาทิตย์', 'จันทร์', 'อังคาร', 'พุธ', 'พฤหัสบดี', 'ศุกร์', 'เสาร์'];
+                const weekdays = ['อา.', 'จ.', 'อ.', 'พ.', 'พฤ.', 'ศ.', 'ส.'];
                 const months = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
                 
                 const weekday = weekdays[d.getDay()];
                 const day = d.getDate();
                 const month = months[d.getMonth()];
-                const year = d.getFullYear();
+                const shortYear = d.getFullYear().toString().slice(-2);
                 
-                return `${weekday} ${day},${month}${year}`;
+                return `${weekday} ${day} ${month} ${shortYear}`;
             } catch (e) {
                 return '';
             }
