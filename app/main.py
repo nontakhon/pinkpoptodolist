@@ -1165,17 +1165,11 @@ def get_external_todo(date_str: str, db: Session = Depends(get_db)):
     due_today_count = sum(1 for t in tasks if t.due_date == target_date)
     overdue_count = sum(1 for t in tasks if t.due_date < target_date)
     
-    tasks_list = []
-    for t in tasks:
-        title = t.title
-        if t.due_date < target_date:
-            title += " (งานค้าง)"
-        tasks_list.append(title)
-        
     members = {m.id: m.name for m in db.query(models.Member).all()}
-    by_member = {}
-    
     categories = {c.id: c.name for c in db.query(models.Category).all()}
+    
+    tasks_list = []
+    by_member = {}
     by_category = {}
     
     for t in tasks:
@@ -1186,16 +1180,32 @@ def get_external_todo(date_str: str, db: Session = Depends(get_db)):
         else:
             m_name = "ไม่ได้มอบหมาย"
             
+        c_name = categories.get(t.category_id, "ไม่ระบุหมวดหมู่")
+        is_overdue = t.due_date < target_date
+        
+        tasks_list.append({
+            "id": t.id,
+            "title": t.title,
+            "assignee": m_name,
+            "category": c_name,
+            "due_date": str(t.due_date),
+            "status": t.status,
+            "is_overdue": is_overdue,
+            "is_recurring": t.is_recurring,
+            "is_habit": t.is_habit,
+            "time_block": t.time_block,
+            "value_amount": t.value_amount
+        })
+            
         if m_name not in by_member:
             by_member[m_name] = {"name": m_name, "total": 0, "due_today": 0, "overdue": 0}
             
         by_member[m_name]["total"] += 1
-        if t.due_date == target_date:
+        if not is_overdue:
             by_member[m_name]["due_today"] += 1
-        elif t.due_date < target_date:
+        else:
             by_member[m_name]["overdue"] += 1
             
-        c_name = categories.get(t.category_id, "ไม่ระบุหมวดหมู่")
         if c_name not in by_category:
             by_category[c_name] = {"name": c_name, "total_pending": 0}
             
