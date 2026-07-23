@@ -1086,11 +1086,15 @@ def parse_date_str(date_str: str) -> date:
 def get_external_sum(date_str: str, db: Session = Depends(get_db)):
     target_date = parse_date_str(date_str)
     
-    query = db.query(models.Task).filter(
-        models.Task.due_date == target_date,
-        models.Task.status.in_(["Completed", "Pending", "Skipped"])
+    query_pending = db.query(models.Task).filter(
+        models.Task.status == "Pending",
+        models.Task.due_date <= target_date
     )
-    tasks = query.all()
+    query_done = db.query(models.Task).filter(
+        models.Task.status.in_(["Completed", "Skipped"]),
+        models.Task.due_date == target_date
+    )
+    tasks = query_pending.all() + query_done.all()
     
     total_tasks = len(tasks)
     completed_tasks = sum(1 for t in tasks if t.status == "Completed")
