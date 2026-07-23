@@ -158,6 +158,7 @@
                                                 <h3 class="font-bold text-gray-800 text-sm leading-tight truncate" :class="task.status === 'Completed' ? 'line-through text-gray-400' : ''" x-text="task.title"></h3>
                                                 
                                                 <!-- Tags (Small) -->
+                                                <span class="text-[9px] text-blue-500 font-bold bg-blue-50 px-1.5 py-0.5 rounded border border-blue-100" x-text="formatTaskDateForDisplay(task.due_date)"></span>
                                                 <span x-show="task.status === 'Pending' && task.due_date < selectedDate" class="text-[9px] text-red-500 font-bold bg-white px-1.5 py-0.5 rounded border border-red-100">ค้าง</span>
                                                 <span x-show="task.is_recurring" class="text-[9px] bg-orange-50 text-orange-500 px-1.5 py-0.5 rounded font-bold border border-orange-100">ประจำ</span>
                                                 <span x-show="task.is_habit" class="text-[9px] bg-green-50 text-green-500 px-1.5 py-0.5 rounded font-bold border border-green-100">Habit</span>
@@ -216,6 +217,7 @@
                                                 <h3 class="font-bold text-gray-800 text-sm leading-tight truncate" :class="task.status === 'Completed' ? 'line-through text-gray-400' : ''" x-text="task.title"></h3>
                                                 
                                                 <!-- Tags (Small) -->
+                                                <span class="text-[9px] text-blue-500 font-bold bg-blue-50 px-1.5 py-0.5 rounded border border-blue-100" x-text="formatTaskDateForDisplay(task.due_date)"></span>
                                                 <span x-show="task.status === 'Pending' && task.due_date < selectedDate" class="text-[9px] text-red-500 font-bold bg-white px-1.5 py-0.5 rounded border border-red-100">ค้าง</span>
                                                 <span x-show="task.is_recurring" class="text-[9px] bg-orange-50 text-orange-500 px-1.5 py-0.5 rounded font-bold border border-orange-100">ประจำ</span>
                                                 <span x-show="task.is_habit" class="text-[9px] bg-green-50 text-green-500 px-1.5 py-0.5 rounded font-bold border border-green-100">Habit</span>
@@ -259,6 +261,7 @@
                             <span class="text-xs text-gray-400 line-through truncate flex-grow" x-text="task.title"></span>
                             
                             <div class="flex items-center gap-1.5 shrink-0">
+                                <span class="text-[8px] text-blue-400 bg-blue-50 px-1 rounded border border-blue-100" x-text="formatTaskDateForDisplay(task.due_date)"></span>
                                 <span x-show="task.category" class="text-[9px] opacity-70" x-text="task.category?.icon_emoji"></span>
                                 <div x-show="task.assignment_type === 'MEMBER' && task.assigned_member_id" class="w-3.5 h-3.5 rounded-full flex items-center justify-center text-[7px] bg-gray-200 text-gray-500 opacity-70" x-text="getMember(task.assigned_member_id)?.avatar_emoji || getMember(task.assigned_member_id)?.name.charAt(0)"></div>
                                 <div x-show="task.assignment_type === 'ANYONE'" class="text-[8px] opacity-70">⭐</div>

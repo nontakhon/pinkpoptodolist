@@ -248,7 +248,20 @@ document.addEventListener('alpine:init', () => {
 
         editingTaskId: null,
         editingTaskNote: '',
-
+        
+        formatTaskDateForDisplay(dateStr) {
+            if (!dateStr) return '';
+            const d = new Date(dateStr);
+            const weekdays = ['อาทิตย์', 'จันทร์', 'อังคาร', 'พุธ', 'พฤหัสบดี', 'ศุกร์', 'เสาร์'];
+            const months = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+            
+            const weekday = weekdays[d.getDay()];
+            const day = d.getDate();
+            const month = months[d.getMonth()];
+            const year = d.getFullYear();
+            
+            return `${weekday} ${day},${month}${year}`;
+        },
         
         // WebSocket Auto-Refresh
         ws: null,
