@@ -1102,9 +1102,15 @@ def get_external_sum(date_str: str, db: Session = Depends(get_db)):
     
     members = {m.id: m.name for m in db.query(models.Member).all()}
     by_member = {}
+    for m_id, m_name in members.items():
+        by_member[m_name] = {"name": m_name, "total": 0, "completed": 0, "pending": 0}
+    by_member["⭐ ใครก็ได้ (ANYONE)"] = {"name": "⭐ ใครก็ได้ (ANYONE)", "total": 0, "completed": 0, "pending": 0}
+    by_member["ไม่ได้มอบหมาย"] = {"name": "ไม่ได้มอบหมาย", "total": 0, "completed": 0, "pending": 0}
     
     categories = {c.id: c.name for c in db.query(models.Category).all()}
     by_category = {}
+    for c_id, c_name in categories.items():
+        by_category[c_name] = {"name": c_name, "completed": 0, "pending": 0}
     
     for t in tasks:
         if t.assignment_type == "MEMBER" and t.assigned_member_id:
@@ -1170,7 +1176,14 @@ def get_external_todo(date_str: str, db: Session = Depends(get_db)):
     
     tasks_list = []
     by_member = {}
+    for m_id, m_name in members.items():
+        by_member[m_name] = {"name": m_name, "total": 0, "due_today": 0, "overdue": 0}
+    by_member["⭐ ใครก็ได้ (ANYONE)"] = {"name": "⭐ ใครก็ได้ (ANYONE)", "total": 0, "due_today": 0, "overdue": 0}
+    by_member["ไม่ได้มอบหมาย"] = {"name": "ไม่ได้มอบหมาย", "total": 0, "due_today": 0, "overdue": 0}
+    
     by_category = {}
+    for c_id, c_name in categories.items():
+        by_category[c_name] = {"name": c_name, "total_pending": 0}
     
     for t in tasks:
         if t.assignment_type == "MEMBER" and t.assigned_member_id:
