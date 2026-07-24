@@ -1099,18 +1099,19 @@ def get_external_sum(date_str: str, db: Session = Depends(get_db)):
     total_tasks = len(tasks)
     completed_tasks = sum(1 for t in tasks if t.status == "Completed")
     pending_tasks = sum(1 for t in tasks if t.status == "Pending")
+    skipped_tasks = sum(1 for t in tasks if t.status == "Skipped")
     
     members = {m.id: m.name for m in db.query(models.Member).all()}
     by_member = {}
     for m_id, m_name in members.items():
-        by_member[m_name] = {"name": m_name, "total": 0, "completed": 0, "pending": 0}
-    by_member["⭐ ใครก็ได้ (ANYONE)"] = {"name": "⭐ ใครก็ได้ (ANYONE)", "total": 0, "completed": 0, "pending": 0}
-    by_member["ไม่ได้มอบหมาย"] = {"name": "ไม่ได้มอบหมาย", "total": 0, "completed": 0, "pending": 0}
+        by_member[m_name] = {"name": m_name, "total": 0, "completed": 0, "pending": 0, "skipped": 0}
+    by_member["⭐ ใครก็ได้ (ANYONE)"] = {"name": "⭐ ใครก็ได้ (ANYONE)", "total": 0, "completed": 0, "pending": 0, "skipped": 0}
+    by_member["ไม่ได้มอบหมาย"] = {"name": "ไม่ได้มอบหมาย", "total": 0, "completed": 0, "pending": 0, "skipped": 0}
     
     categories = {c.id: c.name for c in db.query(models.Category).all()}
     by_category = {}
     for c_id, c_name in categories.items():
-        by_category[c_name] = {"name": c_name, "completed": 0, "pending": 0}
+        by_category[c_name] = {"name": c_name, "completed": 0, "pending": 0, "skipped": 0}
     
     for t in tasks:
         is_completed_or_skipped = t.status in ("Completed", "Skipped")
@@ -1125,22 +1126,26 @@ def get_external_sum(date_str: str, db: Session = Depends(get_db)):
             m_name = "ไม่ได้มอบหมาย"
             
         if m_name not in by_member:
-            by_member[m_name] = {"name": m_name, "total": 0, "completed": 0, "pending": 0}
+            by_member[m_name] = {"name": m_name, "total": 0, "completed": 0, "pending": 0, "skipped": 0}
             
         by_member[m_name]["total"] += 1
         if t.status == "Completed":
             by_member[m_name]["completed"] += 1
         elif t.status == "Pending":
             by_member[m_name]["pending"] += 1
+        elif t.status == "Skipped":
+            by_member[m_name]["skipped"] += 1
             
         c_name = categories.get(t.category_id, "ไม่ระบุหมวดหมู่")
         if c_name not in by_category:
-            by_category[c_name] = {"name": c_name, "completed": 0, "pending": 0}
+            by_category[c_name] = {"name": c_name, "completed": 0, "pending": 0, "skipped": 0}
             
         if t.status == "Completed":
             by_category[c_name]["completed"] += 1
         elif t.status == "Pending":
             by_category[c_name]["pending"] += 1
+        elif t.status == "Skipped":
+            by_category[c_name]["skipped"] += 1
             
     def sort_member_sum(m):
         name = m["name"]
@@ -1155,7 +1160,8 @@ def get_external_sum(date_str: str, db: Session = Depends(get_db)):
         "overview": {
             "total_tasks": total_tasks,
             "completed_tasks": completed_tasks,
-            "pending_tasks": pending_tasks
+            "pending_tasks": pending_tasks,
+            "skipped_tasks": skipped_tasks
         },
         "by_member": by_member_list,
         "by_category": list(by_category.values())
