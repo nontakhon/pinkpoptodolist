@@ -1113,7 +1113,11 @@ def get_external_sum(date_str: str, db: Session = Depends(get_db)):
         by_category[c_name] = {"name": c_name, "completed": 0, "pending": 0}
     
     for t in tasks:
-        if t.assignment_type == "MEMBER" and t.assigned_member_id:
+        is_completed_or_skipped = t.status in ("Completed", "Skipped")
+        
+        if is_completed_or_skipped and t.assigned_member_id:
+            m_name = members.get(t.assigned_member_id, "ไม่ระบุสมาชิก")
+        elif t.assignment_type == "MEMBER" and t.assigned_member_id:
             m_name = members.get(t.assigned_member_id, "ไม่ระบุสมาชิก")
         elif t.assignment_type == "ANYONE":
             m_name = "⭐ ใครก็ได้ (ANYONE)"
